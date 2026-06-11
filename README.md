@@ -46,21 +46,20 @@
 
 ### Data sources (33 total)
 
-| # | Source | Type | Access |
-|---|--------|------|--------|
-| 1 | **JavBus** | javbus.com | ⚠️ Blocked outside CN/JP |
-| 2 | **JavDB** | javdb.com | ❌ Cloudflare |
-| 3 | **JavLibrary** | javlibrary.com | ✅ |
-| 4 | **AVSOX** | avsox.how | ⚠️ Survey redirect sometimes |
-| 5 | **AVSEX** | avsex.xyz | ✅ |
-| 6 | **OneJAV** | onejav.com | ✅ |
-| 7 | **FALENO** | faleno.jp | ✅ |
-| 8 | **DMM/FANZA** | dmm.co.jp | ⚠️ Blocks non-JP IPs |
-| 9 | **Jav321** | jav321.com | ✅ |
-| 10 | **MGStage** | mgstage.com | ⚠️ Cookie needed |
-| 11–33 | Prestige, FC2, FC2PPVDB, FC2Club, ThePornDB, JavDay, Airav, CableAV, CNMDB, Dahlia, Fantastica, FreeJavBT, GIGA, XCity, Kin8, Love6, LuluBar, MadouQu, MMTV, HDouban, HSCangku, MyWife, Official | Various | ✅ Most accessible |
+| # | Source | Type | Access | Priority |
+|---|--------|------|--------|---------|
+| 1 | **OneJAV** | onejav.com | ✅ Best — JP title, actors, date | ⭐ Highest |
+| 2 | **JavCL** | javcl.com | ✅ WordPress, globally accessible | ⭐ High |
+| 3 | **JavBus** | javbus.com | ⚠️ Blocked outside CN/JP | Medium |
+| 4 | **JavDB** | javdb.com | ❌ Cloudflare | Medium |
+| 5 | **JavLibrary** | javlibrary.com | ✅ Direct | Low |
+| 6 | **AVSOX** | avsox.how | ⚠️ Sometimes survey redirect | Low |
+| 7 | **AVSEX** | avsex.xyz | ✅ Direct | Low |
+| 8 | **FALENO** | faleno.com | ⚠️ Blocks non-JP IPs | Low |
+| 9 | **DMM/FANZA** | dmm.co.jp | ⚠️ Blocks non-JP IPs | Low |
+| 10–33 | Jav321, MGStage, Prestige, FC2, FC2PPVDB, FC2Club, ThePornDB, JavDay, Airav, CableAV, CNMDB, Dahlia, Fantastica, FreeJavBT, GIGA, XCity, Kin8, Love6, LuluBar, MadouQu, MMTV, HDouban, HSCangku, MyWife, Official | Various | ✅ Most accessible | Lowest |
 
-If one source is blocked, the tool automatically falls through to the next. The more sources, the better the chance of getting full metadata.
+If one source is blocked, the tool automatically falls through to the next.
 
 ### What it does
 
@@ -71,6 +70,17 @@ If one source is blocked, the tool automatically falls through to the next. The 
 5. **Process** — Generate poster/fanart/thumb images from cover art
 6. **Screenshot** — Extract frames from video files via ffmpeg (video files required)
 7. **Output** — Kodi/Emby NFO + images ready for your media library
+
+### What's new in v0.3.0
+
+- **JavCL source** — `javcl.com`, WordPress-based, globally accessible (7mmtv.sx is dead, replaced by this)
+- **OneJAV fix** — Now properly extracts Japanese title & actress from `/torrent/{number}` pages
+- **NFO format locked** — Now matches exactly the VidHub-working format from FNS-215 sample
+- **Chinese translation** — All text (title, tags, plot) translated to Simplified Chinese
+- **Landscape image** — New `{NUMBER}-landscape.jpg` clear horizontal image added
+- **VidHub compatible naming** — Use `-UC` suffix to prevent online DB matching
+- **Priority source chain** — OneJAV(0) → JavCL(1) → JavBus(2) → rest
+- **Repo cleanup** — venv/pycache removed from tracking, proper .gitignore
 
 ### What's new in v0.2.0
 
@@ -83,16 +93,17 @@ If one source is blocked, the tool automatically falls through to the next. The 
 
 Files are generated in the same directory as the video:
 
-| File | Purpose | Example |
-|------|---------|---------|
-| `{NUMBER}.nfo` | Kodi/Emby metadata | `FNS-215.nfo` |
-| `{NUMBER}.jpg` | Original cover | `FNS-215.jpg` |
-| `{NUMBER}-poster.jpg` | Vertical poster (800×1200) | `FNS-215-poster.jpg` |
-| `{NUMBER}-fanart.jpg` | Horizontal background (1920×1080) | `FNS-215-fanart.jpg` |
-| `{NUMBER}-thumb.jpg` | Thumbnail (480×270) | `FNS-215-thumb.jpg` |
-| `{NUMBER}_screenshot_1~3.jpg` | Video screenshots | `FNS-215_screenshot_1.jpg` |
+| File | Purpose | Size | Example |
+|------|---------|------|---------|
+| `{NUMBER}.nfo` | Kodi/Emby metadata | — | `FNS-215.nfo` |
+| `{NUMBER}.jpg` | Source cover (copy of poster) | — | `FNS-215.jpg` |
+| `{NUMBER}-poster.jpg` | **Vertical poster** (right-half crop) | 400×537 | `FNS-215-poster.jpg` |
+| `{NUMBER}-fanart.jpg` | **Horizontal background** (blurred) | 1920×1289 | `FNS-215-fanart.jpg` |
+| `{NUMBER}-landscape.jpg` | **Horizontal clear** (no blur) | 1920×1289 | `FNS-215-landscape.jpg` |
+| `{NUMBER}-thumb.jpg` | **Thumbnail** (from poster) | 200×269 | `FNS-215-thumb.jpg` |
+| `{NUMBER}_screenshot_1~3.jpg` | Video screenshots | — | `FNS-215_screenshot_1.jpg` |
 
-Place these files next to your video file (e.g. `FNS-215.mp4`) and VidHub/SenPlayer/Emby/Jellyfin will automatically pick them up.
+**VidHub naming tip:** If VidHub matches to wrong metadata (e.g. "FNS Music Festival"), add `-UC` suffix: `FNS-215-UC.nfo`. This prevents online DB matching.
 
 ---
 
@@ -244,43 +255,24 @@ python -m jav_scraper.cli image thumb --url https://example.com/cover.jpg --outp
 
 ---
 
-## Supported Sources (33 total)
+## Supported Sources (34 total)
 
 | # | Source | URL Pattern | Access |
 |---|--------|-------------|--------|
-| 1 | **JavBus** | `javbus.com/search/{ID}` | ⚠️ Cookie might be needed |
-| 2 | **JavDB** | `javdb.com/search?q={ID}` | ❌ Cloudflare protected |
-| 3 | **JavLibrary** | `javlibrary.com/en/?v=byid&id={ID}` | ✅ Direct |
-| 4 | **AVSOX** | `avsox.how/{ID}` | ✅ Direct |
-| 5 | **AVSEX** | `avsex.xyz/{ID}` | ✅ Direct |
-| 6 | **OneJAV** | `onejav.com/torrent/{ID}` | ✅ Direct |
-| 7 | **FALENO** | `faleno.jp/top/works/{ID}/` | ✅ Direct (FALENO only) |
-| 8 | **🆕 DMM/FANZA** | `dmm.co.jp/digital/videoa/-/detail/=/cid={CID}/` | ⚠️ May block non-JP IPs |
-| 9 | **Jav321** | `jav321.com` (POST search) | ✅ Direct |
-| 10 | **MGStage** | `mgstage.com/product/product_detail/{ID}/` | ⚠️ Cookie `adc=1` |
-| 11 | **Prestige** | `prestige-av.com` (JSON API) | ✅ Direct |
-| 12 | **FC2** | `adult.contents.fc2.com/article/{ID}/` | ✅ Direct |
-| 13 | **FC2PPVDB** | `fc2ppvdb.com/articles/{ID}` | ✅ Direct |
-| 14 | **FC2Club** | `fc2club.top/html/FC2-{ID}.html` | ✅ Direct |
-| 15 | **ThePornDB** | `api.theporndb.net/scenes?parse={ID}` | ✅ Free API |
-| 16 | **JavDay** | `javday.tv` (search) | ✅ Direct |
-| 17 | **Airav** | `cn.airav.wiki/video/{ID}` | ✅ Direct |
-| 18 | **CableAV** | `cableav.tv` (search) | ✅ Direct |
-| 19 | **CNMDB** | `cnmdb.net/s0?q={ID}` | ✅ Direct |
-| 20 | **Dahlia** | `dahlia-av.jp/works/{ID}/` | ✅ Direct |
-| 21 | **Fantastica** | `fantastica-vr.com` (search) | ✅ Direct |
-| 22 | **FreeJavBT** | `freejavbt.com/{ID}` | ✅ Direct |
-| 23 | **GIGA** | `giga-web.jp` (search) | ⚠️ Cookie needed |
-| 24 | **XCity** | `xcity.jp` (search) | ✅ Direct |
-| 25 | **Kin8** | `kin8tengoku.com` (search) | ✅ Direct |
-| 26 | **Love6** | `love6.tv` (search) | ✅ Direct |
-| 27 | **LuluBar** | `lulubar.co` (search) | ✅ Direct |
-| 28 | **MadouQu** | `madouqu.com` (search) | ✅ Direct |
-| 29 | **MMTV** | `7mmtv.sx` (search) | ✅ Direct |
-| 30 | **HDouban** | JSON API | ✅ Direct |
-| 31 | **HSCangku** | `hsck860.cc` (search) | ✅ Direct |
-| 32 | **MyWife** | `mywife.jp` (search) | ✅ Direct |
-| 33 | **Official** | Varies by prefix | ✅ Direct |
+| 1 | **OneJAV** | `onejav.com/torrent/{ID}` | ✅ Best — JP title, actress, date |
+| 2 | **🆕 JavCL** | `javcl.com/movie/{ID}` | ✅ WordPress, globally accessible |
+| 3 | **JavBus** | `javbus.com/search/{ID}` | ⚠️ Blocked outside CN/JP |
+| 4 | **JavDB** | `javdb.com/search?q={ID}` | ❌ Cloudflare |
+| 5 | **JavLibrary** | `javlibrary.com/en/?v=byid&id={ID}` | ✅ Direct |
+| 6 | **AVSOX** | `avsox.how/{ID}` | ⚠️ Sometimes survey redirect |
+| 7 | **AVSEX** | `avsex.xyz/{ID}` | ✅ Direct |
+| 8 | **FALENO** | `faleno.jp/top/works/{ID}/` | ⚠️ Blocks non-JP IPs |
+| 9 | **DMM/FANZA** | `dmm.co.jp/digital/videoa/-/detail/=/cid={CID}/` | ⚠️ Blocks non-JP IPs |
+| 10 | **Jav321** | `jav321.com` (POST search) | ✅ Direct |
+| 11 | **MGStage** | `mgstage.com/product/product_detail/{ID}/` | ⚠️ Cookie `adc=1` |
+| 12–34 | Prestige, FC2, FC2PPVDB, FC2Club, ThePornDB, JavDay, Airav, CableAV, CNMDB, Dahlia, Fantastica, FreeJavBT, GIGA, XCity, Kin8, Love6, LuluBar, MadouQu, MMTV(dead), HDouban, HSCangku, MyWife, Official | Various | ✅ Most accessible |
+
+**Note:** `7mmtv.sx` (MMTV) is no longer accessible. Use JavCL as fallback. `javcl.com` is a WordPress-based streaming site with English metadata for most JAV releases.
 
 ---
 
