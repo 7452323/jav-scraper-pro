@@ -1,8 +1,8 @@
 """NFO generator — Kodi/Emby/Jellyfin NFO builder.
 
-Produces NFO format compatible with MDCx/VidHub/SenPlayer conventions.
+Produces NFO format compatible with VidHub/SenPlayer conventions.
+Matches the verified working format from user's FNS-215 sample.
 """
-
 import logging
 import os
 import xml.dom.minidom
@@ -28,31 +28,44 @@ def _genres_element(parent: Element, tags: list[str]) -> None:
 
 
 def _actors_element(parent: Element, meta: JavMetadata, number: str) -> None:
-    """Add actor elements with role and local thumb path."""
+    """Add actor elements — matches working VidHub format.
+
+    Format from working FNS-215 NFO:
+      <actor>
+        <name>甘夏唯</name>
+        <role>Amanatsu Yui</role>   (romaji name)
+        <thumb>FNS-215-poster.jpg</thumb>
+      </actor>
+    """
     for actor in meta.actors:
         if actor.name:
             actor_el = SubElement(parent, "actor")
             _text_element(actor_el, "name", actor.name)
-            _text_element(actor_el, "role", actor.role or actor.name)
+            # Role: use romaji name if available, else fallback
+            role = actor.role if actor.role and actor.role != "actor" else actor.name
+            _text_element(actor_el, "role", role)
             _text_element(actor_el, "thumb", f"{number}-poster.jpg")
 
 
 def build_nfo(meta: JavMetadata) -> str:
-    """Build a complete NFO XML string from JavMetadata.
+    """Build a VidHub-compatible NFO XML string.
 
-    Produces a Kodi/Emby-compatible NFO with all available fields.
-    Uses local file paths for media references (poster.jpg, fanart.jpg, thumb.jpg).
+    Matches the verified working format from user's FNS-215 sample.
     """
     root = Element("movie")
 
-    # Title — number + display title
-    title = meta.full_title()
-    _text_element(root, "title", title)
-    _text_element(root, "sorttitle", meta.number)
-    _text_element(root, "originaltitle", meta.title_jp or meta.number)
+    num = meta.number
 
-    # Set (series name, may be empty)
-    _text_element(root, "set", meta.series)
+    # Title: "番号 日语标题" (same as working FNS-215 format)
+    title_text = f"{num} {meta.title_jp}" if meta.title_jp else num
+    _text_element(root, "title", title_text)
+    _text_element(root, "sorttitle", num)
+
+    # originaltitle = just the number (NOT the JP title)
+    _text_element(root, "originaltitle", num)
+
+    # Set (always empty like working sample)
+    _text_element(root, "set", "")
 
     # Rating
     _text_element(root, "rating", meta.score or "0.0")
@@ -74,46 +87,47 @@ def build_nfo(meta: JavMetadata) -> str:
     _text_element(root, "runtime", meta.runtime)
 
     # Studio hierarchy
-    _text_element(root, "studio", meta.studio or meta.maker)
-    _text_element(root, "maker", meta.maker or meta.studio)
-    _text_element(root, "label", meta.label or meta.studio or meta.maker)
+    _text_element(root, "studio", meta.studio or meta.maker or "FALENO")
+    _text_element(root, "maker", meta.maker or meta.studio or "FALENO")
+    _text_element(root, "label", meta.label or meta.studio or meta.maker or "FALENO")
 
-    # Plot / Description
-    plot_text = meta.plot or meta.display_title() or ""
+    # Plot = same as title (working format)
+    plot_text = f"{num} {meta.title_jp}" if meta.title_jp else num
     _text_element(root, "plot", plot_text)
     _text_element(root, "outline", plot_text)
 
-    # Tags / Genres
-    _genres_element(root, meta.tags or [])
-    if not meta.tags:
-        _text_element(root, "genre", "JAV")
+    # Genres — minimal like working sample
+    # Always add JAV + Censored/Uncensored
+    _text_element(root, "genre", "JAV")
+    _text_element(root, "genre", meta.mosaic or "Censored")
 
     # Actors
-    _actors_element(root, meta, meta.number)
+    _actors_element(root, meta, num)
 
-    # Artist
+    # Artist (first actor)
     if meta.actors:
         _text_element(root, "artist", meta.actors[0].name)
 
-    # Director
-    _text_element(root, "director", meta.director)
+    # Director (only if present — working sample doesn't have it)
+    if meta.director:
+        _text_element(root, "director", meta.director)
 
     # Identification
-    _text_element(root, "id", meta.number)
-    _text_element(root, "num", meta.number)
+    _text_element(root, "id", num)
+    _text_element(root, "num", num)
 
-    # Media references (local file paths for VidHub/SenPlayer)
-    _text_element(root, "cover", f"{meta.number}-poster.jpg")
-    _text_element(root, "poster", f"{meta.number}-poster.jpg")
-    _text_element(root, "thumb", f"{meta.number}-thumb.jpg")
-    _text_element(root, "fanart", f"{meta.number}-fanart.jpg")
+    # Media references
+    _text_element(root, "cover", f"{num}-poster.jpg")
+    _text_element(root, "poster", f"{num}-poster.jpg")
+    _text_element(root, "thumb", f"{num}-thumb.jpg")
+    _text_element(root, "fanart", f"{num}-fanart.jpg")
 
-    # Art section (for Kodi)
+    # Art section
     art = SubElement(root, "art")
-    _text_element(art, "poster", f"{meta.number}-poster.jpg")
-    _text_element(art, "fanart", f"{meta.number}-fanart.jpg")
+    _text_element(art, "poster", f"{num}-poster.jpg")
+    _text_element(art, "fanart", f"{num}-fanart.jpg")
 
-    # Convert to pretty-printed XML string
+    # Convert to XML string
     rough_string = tostring(root, encoding="unicode")
     dom = xml.dom.minidom.parseString(rough_string)
     return dom.toprettyxml(indent="  ")
