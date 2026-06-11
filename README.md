@@ -1,14 +1,22 @@
 # JAV Scraper Pro
 
-> Multi-source JAV metadata scraper — 32 data sources, free Google Translate, video screenshots, full NFO.
-> 多源JAV刮削工具 — 32 个数据源、免费谷歌翻译、视频截图、完整NFO生成。
+<div align="center">
 
 [![Python](https://img.shields.io/badge/Python-3.9+-3776AB.svg?logo=python&logoColor=white)]()
 [![License](https://img.shields.io/badge/License-MIT-green.svg)]()
 
+**Multi-source JAV metadata scraper — 32 data sources, free Google Translate, video screenshots, full NFO.**
+
+<br>
+
+<a href="#english-documentation">📖 English</a> &nbsp;·&nbsp; <a href="#中文文档">📖 中文</a>
+
+</div>
+
 ---
 
-# English Documentation
+<a name="english-documentation"></a>
+# 📖 English Documentation
 
 ## Overview
 
@@ -345,7 +353,8 @@ MIT
 
 ---
 
-# 中文文档
+<a name="中文文档"></a>
+# 📖 中文文档
 
 ## 概述
 
