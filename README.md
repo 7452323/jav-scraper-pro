@@ -1,13 +1,11 @@
 # JAV Scraper Pro
 
-<div align="center">
-
-
-**English | 中文**
+[![Python](https://img.shields.io/badge/Python-3.9+-3776AB.svg?logo=python&logoColor=white)]()
+[![License](https://img.shields.io/badge/License-MIT-green.svg)]()
 
 **Multi-source JAV metadata scraper — 32 data sources, free Google Translate, video screenshots, full NFO.**
 
-</div>
+[📖 English](#english-documentation) · [📖 中文](#中文文档)
 
 ---
 
