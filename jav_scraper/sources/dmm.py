@@ -75,6 +75,14 @@ def _scrape_page(html: str) -> JavMetadata | None:
             # Strip site name suffix like " | FANZA"
             meta.title_jp = re.sub(r'\s*[|│].*$', '', meta.title_jp).strip()
 
+    # --- Check if this is a valid product page ---
+    # DMM returns service messages for retired products
+    if meta.title_jp and re.search(
+        r'サービス[統合終了]|移行|お知らせ|メンテナンス|404|Not Found',
+        meta.title_jp, re.IGNORECASE
+    ):
+        return None
+
     # --- Cover image ---
     cover_match = re.search(
         r'<a\s+[^>]*name="packageImage"[^>]*href="([^"]+)"',

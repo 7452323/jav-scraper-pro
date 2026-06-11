@@ -15,16 +15,29 @@ def scrape(number: str) -> JavMetadata | None:
     if not html:
         return None
 
-    # Find the first result link
-    match = re.search(
-        r'<a\s+href="(/movie/[^"]+)"[^>]*>',
+    # Find the best matching result link (prefer exact match over first)
+    all_links = re.findall(
+        r'<a\s+href="(/(?:movie|torrent)/[^"]+)"[^>]*>\s*([^<]+)',
         html,
         re.IGNORECASE,
     )
-    if not match:
+
+    best_match = None
+    num_lower = number.lower().replace("-", "")
+    for link_href, link_text in all_links:
+        link_clean = link_text.strip().lower().replace("-", "")
+        # Exact match (without hyphens) — perfect
+        if link_clean == num_lower:
+            best_match = link_href
+            break
+        # Partial match — use if no perfect found
+        if num_lower in link_href.lower() and not best_match:
+            best_match = link_href
+
+    if not best_match:
         return None
 
-    movie_url = BASE_URL + match.group(1)
+    movie_url = BASE_URL + best_match
     html = fetch_text(movie_url)
     if not html:
         return None
@@ -41,6 +54,10 @@ def scrape(number: str) -> JavMetadata | None:
     )
     if title_match:
         meta.title_jp = title_match.group(1).strip()
+        # Clean " - OneJAV.com - Free JAV Torrents" suffix
+        meta.title_jp = re.sub(
+            r'\s*[-–|]\s*OneJAV\..*$', '', meta.title_jp, flags=re.IGNORECASE
+        ).strip()
 
     # Actors
     actor_matches = re.findall(
@@ -73,9 +90,9 @@ def scrape(number: str) -> JavMetadata | None:
     )
     meta.tags = [t.strip() for t in tags if t.strip()]
 
-    # Cover image
+    # Cover image — try multiple patterns (class may come before or after src)
     cover_match = re.search(
-        r'<img\s+[^>]*src="([^"]+)"[^>]*class="[^"]*hw-image[^"]*"',
+        r'<img[^>]*class="[^"]*image[^"]*"[^>]*src="([^"]+\.(?:jpg|jpeg|png)(?:\?[^"]*)?)"',
         html,
         re.IGNORECASE,
     )
@@ -85,8 +102,17 @@ def scrape(number: str) -> JavMetadata | None:
             html,
             re.IGNORECASE,
         )
+    if not cover_match:
+        cover_match = re.search(
+            r'<img\s+[^>]*src="([^"]+)"[^>]*class="[^"]*hw-image[^"]*"',
+            html,
+            re.IGNORECASE,
+        )
     if cover_match:
         meta.cover_url = cover_match.group(1).strip()
+        # Skip static/internal images
+        if "static" in meta.cover_url or meta.cover_url.startswith("/"):
+            meta.cover_url = None
 
     # Poster
     if meta.cover_url:
