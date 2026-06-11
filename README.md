@@ -9,13 +9,13 @@
 
 <br>
 
-<a href="#english-documentation">📖 English</a> &nbsp;·&nbsp; <a href="#中文文档">📖 中文</a>
+<a href="#en">📖 English</a> &nbsp;·&nbsp; <a href="#zh">📖 中文</a>
 
 </div>
 
 ---
 
-<a name="english-documentation"></a>
+<a name="en"></a>
 # 📖 English Documentation
 
 ## Overview
@@ -353,7 +353,7 @@ MIT
 
 ---
 
-<a name="中文文档"></a>
+<a name="zh"></a>
 # 📖 中文文档
 
 ## 概述
