@@ -206,12 +206,11 @@ def cmd_sources(args: argparse.Namespace) -> None:
 
 
 def cmd_translate(args: argparse.Namespace) -> None:
-    """Translate a title using DeepSeek."""
+    """Translate a title using multi-engine fallback."""
     from jav_scraper.translator import translate_title
 
     title = args.title
-    target = args.target
-    result = translate_title(title, target)
+    result = translate_title(title)
     print(result)
 
 
@@ -266,6 +265,62 @@ def cmd_video(args: argparse.Namespace) -> None:
         sys.exit(1)
 
 
+def cmd_scan(args: argparse.Namespace) -> None:
+    """Handle the 'scan' subcommand — batch directory scanning."""
+    _register_default_sources()
+
+    from jav_scraper.scanner import scan_directory
+
+    directory = args.directory
+    translate = args.translate
+    merge = args.merge
+    video_shots = not args.no_video
+    recursive = not args.no_recursive
+
+    print(f"Scanning: {directory}")
+    print(f"Translate: {'yes' if translate else 'no'}")
+    print(f"Merge sources: {'yes' if merge else 'no'}")
+    print(f"Video screenshots: {'yes' if video_shots else 'no'}")
+    print(f"Recursive: {'yes' if recursive else 'no'}")
+    print()
+
+    results = scan_directory(
+        directory=directory,
+        translate=translate,
+        merge=merge,
+        video_shots=video_shots,
+        recursive=recursive,
+    )
+
+    # Print summary
+    success_count = sum(1 for r in results.values() if r.get("success"))
+    fail_count = sum(1 for r in results.values() if not r.get("success"))
+
+    print()
+    print("=" * 60)
+    print(f"Scan complete: {success_count} success, {fail_count} failed, {len(results)} total")
+    print("=" * 60)
+
+    if args.json:
+        output = {
+            "directory": directory,
+            "total": len(results),
+            "success": success_count,
+            "failed": fail_count,
+            "results": {
+                num: {
+                    "success": r.get("success", False),
+                    "nfo_path": r.get("nfo_path"),
+                    "title": r.get("title"),
+                    "error": r.get("error"),
+                    "video_count": r.get("video_count"),
+                }
+                for num, r in sorted(results.items())
+            },
+        }
+        print(json.dumps(output, ensure_ascii=False, indent=2))
+
+
 def build_parser() -> argparse.ArgumentParser:
     """Build the argument parser."""
     parser = argparse.ArgumentParser(
@@ -291,7 +346,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p_scrape.add_argument(
         "--translate", "-t", action="store_true",
-        help="Translate titles via DeepSeek"
+        help="Translate titles via multi-engine (free)"
     )
     p_scrape.add_argument(
         "--merge", "-m", action="store_true",
@@ -314,6 +369,34 @@ def build_parser() -> argparse.ArgumentParser:
     # sources
     p_sources = subparsers.add_parser(
         "sources", help="List registered sources"
+    )
+
+    # scan -- NEW!
+    p_scan = subparsers.add_parser(
+        "scan", help="Batch scan directory for JAV videos"
+    )
+    p_scan.add_argument(
+        "directory", help="Directory to scan for video files"
+    )
+    p_scan.add_argument(
+        "--translate", "-t", action="store_true",
+        help="Translate titles (multi-engine fallback)"
+    )
+    p_scan.add_argument(
+        "--merge", "-m", action="store_true",
+        help="Merge from all sources"
+    )
+    p_scan.add_argument(
+        "--no-video", action="store_true",
+        help="Skip video screenshot extraction"
+    )
+    p_scan.add_argument(
+        "--no-recursive", action="store_true",
+        help="Don't scan subdirectories"
+    )
+    p_scan.add_argument(
+        "--json", "-j", action="store_true",
+        help="Output results as JSON"
     )
 
     # translate
@@ -382,6 +465,8 @@ def main() -> None:
         cmd_nfo(args)
     elif args.command == "sources":
         cmd_sources(args)
+    elif args.command == "scan":
+        cmd_scan(args)
     elif args.command == "translate":
         cmd_translate(args)
     elif args.command == "image":

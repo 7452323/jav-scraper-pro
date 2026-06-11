@@ -34,6 +34,9 @@ _register("avsex", 5)
 _register("onejav", 6)
 _register("faleno", 7)
 
+# --- DMM/FANZA ---
+_register("dmm", 7)
+
 # --- New sources (priority 8-33) ---
 _register("jav321", 8)
 _register("mgstage", 9)

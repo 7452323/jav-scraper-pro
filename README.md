@@ -3,7 +3,7 @@
 [![Python](https://img.shields.io/badge/Python-3.9+-3776AB.svg?logo=python&logoColor=white)]()
 [![License](https://img.shields.io/badge/License-MIT-green.svg)]()
 
-**Multi-source JAV metadata scraper — 32 data sources, free Google Translate, video screenshots, full NFO.**
+**Multi-source JAV metadata scraper — 33 data sources, free multi-engine translation, batch directory scan, video screenshots, full NFO.**
 
 [📖 English](#english-documentation) · [📖 中文](#中文文档)
 
@@ -13,18 +13,28 @@
 
 ## Overview
 
-JAV Scraper Pro fetches metadata for Japanese Adult Videos (JAV) from 32 websites, merges results, translates titles/plots to Chinese (free), extracts video screenshots, and generates Kodi/Emby/Jellyfin-compatible NFO + poster/fanart/thumb images.
+JAV Scraper Pro fetches metadata for Japanese Adult Videos (JAV) from 33 websites, merges results, translates titles/plots to Chinese (free, multi-engine fallback), extracts video screenshots, and generates Kodi/Emby/Jellyfin-compatible NFO + poster/fanart/thumb images.
 
 ### What it does
 
-1. **Scrape** — Search a JAV number (e.g. `FNS-215`) across 32 sources
+1. **Scrape** — Search a JAV number (e.g. `FNS-215`) across 33 sources
 2. **Merge** — Combine the best data from all sources (priority-based fallback)
-3. **Translate** — Free Google Translate: Japanese → Chinese (no API key needed)
-4. **Process** — Generate poster/fanart/thumb images from cover art
-5. **Screenshot** — Extract frames from video files via ffmpeg
-6. **Output** — Kodi/Emby NFO + images ready for your media library
+3. **Translate** — **Free multi-engine**: Google → MyMemory → PONS (auto-fallback, no API keys)
+4. **Batch Scan** — Scan a folder, auto-detect all JAV numbers, scrape everything at once
+5. **Process** — Generate poster/fanart/thumb images from cover art
+6. **Screenshot** — Extract frames from video files via ffmpeg
+7. **Output** — Kodi/Emby NFO + images ready for your media library
+
+### What's new in v0.2.0
+
+- **Batch directory scanning** — `jav-scraper scan /path/to/videos/` auto-detects JAV numbers from filenames and scrapes all at once
+- **DMM/FANZA source** — Official DMM.co.jp source (Japan's largest AV retailer)
+- **Multi-engine translation** — Google → MyMemory → PONS automatic fallback chain. Free, no API keys
+- **33 total sources** (up from 32)
 
 ### Output file naming
+
+Files are generated in the same directory as the video:
 
 | File | Purpose | Example |
 |------|---------|---------|
@@ -33,7 +43,7 @@ JAV Scraper Pro fetches metadata for Japanese Adult Videos (JAV) from 32 website
 | `{NUMBER}-poster.jpg` | Vertical poster (800×1200) | `FNS-215-poster.jpg` |
 | `{NUMBER}-fanart.jpg` | Horizontal background (1920×1080) | `FNS-215-fanart.jpg` |
 | `{NUMBER}-thumb.jpg` | Thumbnail (480×270) | `FNS-215-thumb.jpg` |
-| `screenshot_1~3.jpg` | Video screenshots (if `--video`) | `screenshot_1.jpg` |
+| `{NUMBER}_screenshot_1~3.jpg` | Video screenshots | `FNS-215_screenshot_1.jpg` |
 
 Place these files next to your video file (e.g. `FNS-215.mp4`) and VidHub/SenPlayer/Emby/Jellyfin will automatically pick them up.
 
@@ -61,7 +71,7 @@ pip install -e .
 |---------|-----------|-----|
 | `requests` | ✅ Yes | HTTP fetching |
 | `pillow` | ✅ Yes | Image processing (poster/fanart/thumb) |
-| `deep-translator` | ✅ Yes | Free Google Translate |
+| `deep-translator` | ✅ Yes | Free multi-engine translation (Google → MyMemory → PONS) |
 | `ffmpeg` | ⚠️ Optional | Video screenshots (install via apt/brew/choco) |
 
 ### Video screenshot support
@@ -101,6 +111,40 @@ python -m jav_scraper.cli scrape FNS-215 --json
 python -m jav_scraper.cli scrape FNS-215 MIDV-001 ABW-123
 ```
 
+### 🆕 Batch directory scan (auto-detect + scrape all)
+
+```bash
+# Scan a folder, auto-detect JAV numbers, scrape everything
+jav-scraper scan /path/to/videos/
+
+# With translation and merge
+jav-scraper scan /path/to/videos/ --translate --merge
+
+# Skip video screenshots (faster)
+jav-scraper scan /path/to/videos/ --no-video
+
+# Non-recursive (one folder only)
+jav-scraper scan /path/to/videos/ --no-recursive
+
+# JSON summary output
+jav-scraper scan /path/to/videos/ --json
+```
+
+The scanner:
+1. Recursively finds all video files (.mp4, .mkv, .avi, .wmv, .mov, .m4v, .ts, etc.)
+2. Extracts JAV numbers from filenames (supports FC2, HEYZO, 1pondo, standard formats)
+3. Groups videos by number (handles multi-disc releases)
+4. Scrapes metadata for each unique number
+5. Writes NFO + poster/fanart/thumb in each video's directory
+6. Extracts 3 screenshots from the largest video per number
+
+**Supported filename formats:**
+- Standard: `FNS-215.mp4`, `FNS_215.mkv`, `MIDV-001.avi`
+- FC2: `FC2-1234567.mp4`, `FC2_123456.mkv`
+- HEYZO: `HEYZO-1234.mp4`
+- 1pondo: `061115_001.mp4`
+- Mixed content: `[FALENO] FNS-215 美女と.mp4`
+
 ### Full pipeline with video
 
 ```bash
@@ -131,7 +175,7 @@ python -m jav_scraper.cli sources
 ### Translate text
 
 ```bash
-# Japanese → Chinese (default)
+# Japanese → Chinese (uses multi-engine fallback)
 python -m jav_scraper.cli translate "完全主観で誘惑してくる美脚ナースの卑猥な治療"
 
 # Japanese → English
@@ -151,22 +195,9 @@ python -m jav_scraper.cli image fanart --url https://example.com/cover.jpg --out
 python -m jav_scraper.cli image thumb --url https://example.com/cover.jpg --output thumb.jpg
 ```
 
-### Video screenshots
-
-```bash
-# Single screenshot at default position (25% into video)
-python -m jav_scraper.cli video video.mp4 --output screenshot.jpg
-
-# Screenshot at custom time (seconds)
-python -m jav_scraper.cli video video.mp4 --output shot.jpg --time 60
-
-# Grid of 3 screenshots
-python -m jav_scraper.cli video video.mp4 --output grid.jpg --grid
-```
-
 ---
 
-## Supported Sources (32 total)
+## Supported Sources (33 total)
 
 | # | Source | URL Pattern | Access |
 |---|--------|-------------|--------|
@@ -177,76 +208,32 @@ python -m jav_scraper.cli video video.mp4 --output grid.jpg --grid
 | 5 | **AVSEX** | `avsex.xyz/{ID}` | ✅ Direct |
 | 6 | **OneJAV** | `onejav.com/torrent/{ID}` | ✅ Direct |
 | 7 | **FALENO** | `faleno.jp/top/works/{ID}/` | ✅ Direct (FALENO only) |
-| 8 | **Jav321** | `jav321.com` (POST search) | ✅ Direct |
-| 9 | **MGStage** | `mgstage.com/product/product_detail/{ID}/` | ⚠️ Cookie `adc=1` |
-| 10 | **Prestige** | `prestige-av.com` (JSON API) | ✅ Direct |
-| 11 | **FC2** | `adult.contents.fc2.com/article/{ID}/` | ✅ Direct |
-| 12 | **FC2PPVDB** | `fc2ppvdb.com/articles/{ID}` | ✅ Direct |
-| 13 | **FC2Club** | `fc2club.top/html/FC2-{ID}.html` | ✅ Direct |
-| 14 | **ThePornDB** | `api.theporndb.net/scenes?parse={ID}` | ✅ Free API |
-| 15 | **JavDay** | `javday.tv` (search) | ✅ Direct |
-| 16 | **Airav** | `cn.airav.wiki/video/{ID}` | ✅ Direct |
-| 17 | **CableAV** | `cableav.tv` (search) | ✅ Direct |
-| 18 | **CNMDB** | `cnmdb.net/s0?q={ID}` | ✅ Direct |
-| 19 | **Dahlia** | `dahlia-av.jp/works/{ID}/` | ✅ Direct |
-| 20 | **Fantastica** | `fantastica-vr.com` (search) | ✅ Direct |
-| 21 | **FreeJavBT** | `freejavbt.com/{ID}` | ✅ Direct |
-| 22 | **GIGA** | `giga-web.jp` (search) | ⚠️ Cookie needed |
-| 23 | **XCity** | `xcity.jp` (search) | ✅ Direct |
-| 24 | **Kin8** | `kin8tengoku.com` (search) | ✅ Direct |
-| 25 | **Love6** | `love6.tv` (search) | ✅ Direct |
-| 26 | **LuluBar** | `lulubar.co` (search) | ✅ Direct |
-| 27 | **MadouQu** | `madouqu.com` (search) | ✅ Direct |
-| 28 | **MMTV** | `7mmtv.sx` (search) | ✅ Direct |
-| 29 | **HDouban** | JSON API | ✅ Direct |
-| 30 | **HSCangku** | `hsck860.cc` (search) | ✅ Direct |
-| 31 | **MyWife** | `mywife.jp` (search) | ✅ Direct |
-| 32 | **Official** | Varies by prefix | ✅ Direct |
-
----
-
-## NFO Format
-
-The tool generates standard Kodi/Emby/Jellyfin-compatible NFO files:
-
-```xml
-<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
-<movie>
-  <title>FNS-215 中文标题（已翻译）</title>
-  <sorttitle>FNS-215</sorttitle>
-  <originaltitle>FNS-215</originaltitle>
-  <set>系列名称</set>
-  <rating>8.5</rating>
-  <year>2026</year>
-  <mpaa>XXX</mpaa>
-  <premiered>2026-06-10</premiered>
-  <release>2026-06-10</release>
-  <runtime>120</runtime>
-  <studio>FALENO</studio>
-  <maker>FALENO</maker>
-  <label>FALENO</label>
-  <publisher>发行商</publisher>
-  <director>导演名</director>
-  <plot>简介描述</plot>
-  <outline>简介描述</outline>
-  <genre>JAV</genre>
-  <genre>Censored</genre>
-  <tag>标签1</tag>
-  <tag>标签2</tag>
-  <actor>
-    <name>女优名</name>
-    <role></role>
-    <thumb>女优头像URL</thumb>
-  </actor>
-  <artist>女优名</artist>
-  <id>FNS-215</id>
-  <num>FNS-215</num>
-  <cover>FNS-215-poster.jpg</cover>
-  <poster>FNS-215-poster.jpg</poster>
-  <thumb>FNS-215-thumb.jpg</thumb>
-  <fanart>FNS-215-fanart.jpg</fanart>
-</movie>
-```
+| 8 | **🆕 DMM/FANZA** | `dmm.co.jp/digital/videoa/-/detail/=/cid={CID}/` | ⚠️ May block non-JP IPs |
+| 9 | **Jav321** | `jav321.com` (POST search) | ✅ Direct |
+| 10 | **MGStage** | `mgstage.com/product/product_detail/{ID}/` | ⚠️ Cookie `adc=1` |
+| 11 | **Prestige** | `prestige-av.com` (JSON API) | ✅ Direct |
+| 12 | **FC2** | `adult.contents.fc2.com/article/{ID}/` | ✅ Direct |
+| 13 | **FC2PPVDB** | `fc2ppvdb.com/articles/{ID}` | ✅ Direct |
+| 14 | **FC2Club** | `fc2club.top/html/FC2-{ID}.html` | ✅ Direct |
+| 15 | **ThePornDB** | `api.theporndb.net/scenes?parse={ID}` | ✅ Free API |
+| 16 | **JavDay** | `javday.tv` (search) | ✅ Direct |
+| 17 | **Airav** | `cn.airav.wiki/video/{ID}` | ✅ Direct |
+| 18 | **CableAV** | `cableav.tv` (search) | ✅ Direct |
+| 19 | **CNMDB** | `cnmdb.net/s0?q={ID}` | ✅ Direct |
+| 20 | **Dahlia** | `dahlia-av.jp/works/{ID}/` | ✅ Direct |
+| 21 | **Fantastica** | `fantastica-vr.com` (search) | ✅ Direct |
+| 22 | **FreeJavBT** | `freejavbt.com/{ID}` | ✅ Direct |
+| 23 | **GIGA** | `giga-web.jp` (search) | ⚠️ Cookie needed |
+| 24 | **XCity** | `xcity.jp` (search) | ✅ Direct |
+| 25 | **Kin8** | `kin8tengoku.com` (search) | ✅ Direct |
+| 26 | **Love6** | `love6.tv` (search) | ✅ Direct |
+| 27 | **LuluBar** | `lulubar.co` (search) | ✅ Direct |
+| 28 | **MadouQu** | `madouqu.com` (search) | ✅ Direct |
+| 29 | **MMTV** | `7mmtv.sx` (search) | ✅ Direct |
+| 30 | **HDouban** | JSON API | ✅ Direct |
+| 31 | **HSCangku** | `hsck860.cc` (search) | ✅ Direct |
+| 32 | **MyWife** | `mywife.jp` (search) | ✅ Direct |
+| 33 | **Official** | Varies by prefix | ✅ Direct |
 
 ---
 
@@ -254,9 +241,10 @@ The tool generates standard Kodi/Emby/Jellyfin-compatible NFO files:
 
 | Feature | JAV Scraper Pro | MDCx |
 |---------|----------------|------|
-| Data sources | **32** | 40+ |
+| Data sources | **33** (incl. DMM) | 40+ |
 | Interface | **CLI (terminal)** | PyQt5 GUI |
-| Translation | **Google Translate (free, no key)** | DeepL + YouDao + OpenAI |
+| Translation | **Google + MyMemory + PONS (free, auto-fallback)** | DeepL + YouDao + OpenAI |
+| Batch directory scan | **✅ NEW** | ✅ |
 | Video screenshots | ✅ ffmpeg | ✅ |
 | Poster/fanart/thumb | ✅ **Automatic** | ✅ |
 | Multi-source merge | ✅ Priority fallback | ✅ |
@@ -269,12 +257,10 @@ The tool generates standard Kodi/Emby/Jellyfin-compatible NFO files:
 | File renaming | ❌ (manual) | ✅ Template system |
 | NFO template | ❌ (fixed) | ✅ Customizable |
 | GUI batch | ❌ | ✅ |
-| Extra sources | ❌ (30 more) | ✅ 国产/独立站等 |
+| Extra sources | ❌ | ✅ 国产/独立站等 |
 
 ### MDCx Exclusive Features (not in JAV Scraper Pro)
 
-- DMM/FANZA official source
-- FC2Hub additional source
 - Getchu (anime/games)
 - Chinese native AV (国产/麻豆/91)
 - File auto-renaming & organization
@@ -292,7 +278,7 @@ jav-scraper-pro/
 │   ├── __init__.py           # Package init, version
 │   ├── metadata.py           # Data model (JavMetadata, Actor)
 │   ├── http_client.py        # HTTP session with error handling
-│   ├── sources/              # 32 individual source scrapers
+│   ├── sources/              # 33 individual source scrapers
 │   │   ├── __init__.py       # Source registry
 │   │   ├── onejav.py         # OneJAV
 │   │   ├── javdb.py          # JavDB
@@ -301,37 +287,17 @@ jav-scraper-pro/
 │   │   ├── avsox.py          # AVSOX
 │   │   ├── avsex.py          # AVSEX
 │   │   ├── javlibrary.py     # JavLibrary
+│   │   ├── dmm.py            # 🆕 DMM/FANZA
 │   │   ├── jav321.py         # Jav321
-│   │   ├── mgstage.py        # MGStage
-│   │   ├── prestige.py       # Prestige
-│   │   ├── fc2.py            # FC2
-│   │   ├── fc2ppvdb.py       # FC2PPVDB
-│   │   ├── fc2club.py        # FC2Club
-│   │   ├── theporndb.py      # ThePornDB
-│   │   ├── javday.py         # JavDay
-│   │   ├── airav.py          # Airav
-│   │   ├── cableav.py        # CableAV
-│   │   ├── cnmdb.py          # CNMDB
-│   │   ├── dahlia.py         # Dahlia
-│   │   ├── fantastica.py     # Fantastica
-│   │   ├── freejavbt.py      # FreeJavBT
-│   │   ├── giga.py           # GIGA
-│   │   ├── xcity.py          # XCity
-│   │   ├── kin8.py           # Kin8
-│   │   ├── love6.py          # Love6
-│   │   ├── lulubar.py        # LuluBar
-│   │   ├── madouqu.py        # MadouQu
-│   │   ├── mmtv.py           # MMTV
-│   │   ├── hdouban.py        # HDouban
-│   │   ├── hscangku.py       # HSCangku
-│   │   ├── mywife.py         # MyWife
+│   │   ├── ... (25 more)
 │   │   └── official.py       # Generic official sites
 │   ├── orchestrator.py       # Multi-source merge + fallback
-│   ├── translator.py         # Google Translate (free)
+│   ├── translator.py         # 🆕 Multi-engine translation (Google → MyMemory → PONS)
+│   ├── scanner.py            # 🆕 Batch directory scanner
 │   ├── image_processor.py    # Poster/fanart/thumb generation
 │   ├── video_processor.py    # ffmpeg screenshot extraction
 │   ├── nfo_generator.py      # Kodi/Emby NFO builder
-│   └── cli.py                # Command-line interface
+│   └── cli.py                # Command-line interface (updated with scan)
 ├── setup.py                  # Package installation
 ├── requirements.txt          # Dependencies
 ├── .gitignore
@@ -350,24 +316,74 @@ MIT
 
 ## 概述
 
-JAV Scraper Pro 是一个多源 JAV 元数据刮削工具。输入番号（如 `FNS-215`），自动从 32 个网站抓取数据，合并最佳结果，生成 Kodi/Emby/Jellyfin 兼容的 NFO 文件和海报图片。
+JAV Scraper Pro 是一个多源 JAV 元数据刮削工具。输入番号（如 `FNS-215`），自动从 33 个网站抓取数据，合并最佳结果，生成 Kodi/Emby/Jellyfin 兼容的 NFO 文件和海报图片。
 
 ### 功能一览
 
-1. **刮削** — 输入番号，自动搜索 32 个数据源
+1. **刮削** — 输入番号，自动搜索 33 个数据源（新增 DMM/FANZA）
 2. **合并** — 按优先级自动 fallback，合并最佳元数据
-3. **翻译** — 免费谷歌翻译，日文标题/简介→中文（无需 API Key）
-4. **裁图** — 从横版封面生成竖版海报（poster）、横版背景（fanart）、缩略图（thumb）
-5. **截图** — 从视频文件抽取 3 帧截图（需安装 ffmpeg）
-6. **输出** — 完整的 NFO + 图片，直接放入视频目录即可被播放器识别
+3. **翻译** — **多引擎免费翻译链**：Google → MyMemory → PONS 自动切换，全部免费无需 API Key
+4. **批量扫描** — 🆕 `jav-scraper scan` 扫文件夹，自动识别文件名中的番号，一次性全部刮完
+5. **裁图** — 从横版封面生成竖版海报（poster）、横版背景（fanart）、缩略图（thumb）
+6. **截图** — 从视频文件抽取 3 帧截图（需安装 ffmpeg）
+7. **输出** — 完整的 NFO + 图片，直接放入视频目录即可被播放器识别
+
+### 批量扫描（一键刮完整个文件夹）
+
+```bash
+# 扫描文件夹，自动识别番号，全部刮削
+jav-scraper scan /path/to/videos/
+
+# 带翻译和合并
+jav-scraper scan /path/to/videos/ --translate --merge
+
+# 不截图（更快）
+jav-scraper scan /path/to/videos/ --no-video
+
+# 不递归子目录
+jav-scraper scan /path/to/videos/ --no-recursive
+```
+
+支持的视频格式：`.mp4` `.mkv` `.avi` `.wmv` `.mov` `.m4v` `.ts` `.webm` `.flv` 等
+
+支持的文件名格式：
+- 标准：`FNS-215.mp4`、`FNS_215.mkv`、`MIDV-001.avi`
+- FC2：`FC2-1234567.mp4`
+- HEYZO：`HEYZO-1234.mp4`
+- 1pondo：`061115_001.mp4`
+- 含前缀：`[FALENO] FNS-215 美女と.mp4`
+
+### 多引擎翻译（自动切换，全部免费）
+
+| 引擎 | 优先级 | 特点 |
+|------|--------|------|
+| ① Google Translate | 首选 | 最稳定，无限制 |
+| ② Google Translate (TW) | 自动降级 | 繁体中文备线 |
+| ③ MyMemory Translator | 再降级 | 日限约5000字（无需 Key） |
+| ④ PONS Translator | 最后备选 | 词典翻译，保证有结果 |
+
+如果 Google 被限流或连不上，自动切到 MyMemory，再不行切 PONS，保证翻译不断。
+
+### 输出文件命名
+
+文件自动输出在视频同级目录：
+
+| 文件 | 用途 | 示例 |
+|------|------|------|
+| `{番号}.nfo` | Kodi/Emby 元数据 | `FNS-215.nfo` |
+| `{番号}.jpg` | 原始封面 | `FNS-215.jpg` |
+| `{番号}-poster.jpg` | 竖版海报 | `FNS-215-poster.jpg` |
+| `{番号}-fanart.jpg` | 横版背景 | `FNS-215-fanart.jpg` |
+| `{番号}-thumb.jpg` | 缩略图 | `FNS-215-thumb.jpg` |
+| `{番号}_screenshot_1~3.jpg` | 视频截图（25%/50%/75%处） | `FNS-215_screenshot_1.jpg` |
 
 ### 配套 VidHub / SenPlayer 使用
 
-VidHub 和 SenPlayer 不读取 NFO 文件，而是通过同目录下的文件名自动匹配封面：
+VidHub 和 SenPlayer 通过文件名自动匹配封面：
 
 ```
 你的视频目录/
-├── FNS-215.mp4           ← 视频文件（文件名自定义）
+├── FNS-215.mp4           ← 视频文件
 ├── FNS-215.nfo           ← 元数据（Emby/Jellyfin 用）
 ├── FNS-215-poster.jpg    ← 竖封面（显示在海报墙）
 ├── FNS-215-fanart.jpg    ← 横背景（显示在详情页）
@@ -399,7 +415,7 @@ pip install -e .
 |----|--------|------|
 | `requests` | ✅ 必须 | 网页请求 |
 | `pillow` | ✅ 必须 | 图片处理（裁图/模糊背景） |
-| `deep-translator` | ✅ 必须 | 免费谷歌翻译 |
+| `deep-translator` | ✅ 必须 | 免费多引擎翻译（Google→MyMemory→PONS） |
 | `ffmpeg` | ⚠️ 可选 | 视频截图（装不装都行） |
 
 ### 安装 ffmpeg（用于截图）
@@ -418,254 +434,22 @@ choco install ffmpeg
 
 ---
 
-## 使用说明
+## 更新日志
 
-### 基本刮削
+### v0.1.0 (初始版本)
+- 32 个数据源
+- 免费 Google 翻译
+- 视频截图
+- 多源合并
 
-```bash
-# 默认模式：按优先级依次尝试，第一个成功的源就返回
-python -m jav_scraper.cli scrape FNS-215
-
-# 合并模式：尝试所有源，合并最佳结果
-python -m jav_scraper.cli scrape FNS-215 --merge
-
-# 刮削+翻译+合并（完整流程）
-python -m jav_scraper.cli scrape FNS-215 --merge --translate
-
-# JSON 格式输出
-python -m jav_scraper.cli scrape FNS-215 --json
-
-# 同时刮多个
-python -m jav_scraper.cli scrape FNS-215 MIDV-001 ABW-123
-```
-
-### 完整流程（含视频截图）
-
-```bash
-python -m jav_scraper.cli scrape FNS-215 --translate --video /path/to/FNS-215.mp4
-```
-
-一次输出：NFO + poster.jpg + fanart.jpg + thumb.jpg + screenshot_1~3.jpg
-
-### 只生成 NFO
-
-```bash
-# 刮削后生成 NFO
-python -m jav_scraper.cli nfo FNS-215
-
-# 指定输出路径
-python -m jav_scraper.cli nfo FNS-215 --output /path/to/FNS-215.nfo
-
-# 合并+翻译
-python -m jav_scraper.cli nfo FNS-215 --merge --translate
-```
-
-### 查看所有数据源
-
-```bash
-python -m jav_scraper.cli sources
-```
-
-输出示例：
-```
-Total sources: 32
-  [ 1] javbus
-  [ 2] javdb
-  [ 3] javlibrary
-  [ 4] avsox
-  [ 5] avsex
-  [ 6] onejav
-  [ 7] faleno
-  [ 8] jav321
-  [ 9] mgstage
-  [10] prestige
-  ...
-```
-
-### 翻译文本
-
-```bash
-# 日文→中文（默认）
-python -m jav_scraper.cli translate "完全主観で誘惑してくる美脚ナースの卑猥な治療"
-
-# 日文→英文
-python -m jav_scraper.cli translate "完全主観で誘惑してくる美脚ナースの卑猥な治療" --target english
-```
-
-### 图片处理
-
-```bash
-# 生成竖版海报（默认从右边裁切）
-python -m jav_scraper.cli image poster --url https://example.com/cover.jpg --output poster.jpg
-
-# 生成横版背景（高斯模糊填充）
-python -m jav_scraper.cli image fanart --url https://example.com/cover.jpg --output fanart.jpg
-
-# 生成缩略图
-python -m jav_scraper.cli image thumb --url https://example.com/cover.jpg --output thumb.jpg
-```
-
-### 视频截图
-
-```bash
-# 截一帧（默认在视频 25% 位置）
-python -m jav_scraper.cli video video.mp4 --output screenshot.jpg
-
-# 指定时间点（秒）
-python -m jav_scraper.cli video video.mp4 --output shot.jpg --time 60
-
-# 三帧拼图
-python -m jav_scraper.cli video video.mp4 --output grid.jpg --grid
-```
+### v0.2.0 (当前版本) 🆕
+- **批量目录扫描** — `jav-scraper scan` 自动识别番号批量刮削
+- **DMM/FANZA 源** — 官方 DMM 数据源
+- **多引擎翻译** — Google → MyMemory → PONS 自动降级，全部免费
+- 共 33 个数据源
 
 ---
 
-## 32 个数据源一览
-
-| # | 源名称 | 网址 | 访问方式 |
-|---|--------|------|---------|
-| 1 | **JavBus** | `javbus.com` | ⚠️ 可能需要 Cookie |
-| 2 | **JavDB** | `javdb.com` | ❌ Cloudflare 保护 |
-| 3 | **JavLibrary** | `javlibrary.com` | ✅ 直连 |
-| 4 | **AVSOX** | `avsox.how` | ✅ 直连 |
-| 5 | **AVSEX** | `avsex.xyz` | ✅ 直连 |
-| 6 | **OneJAV** | `onejav.com` | ✅ 直连 |
-| 7 | **FALENO** | `faleno.jp` | ✅ 仅限FALENO系列 |
-| 8 | **Jav321** | `jav321.com` | ✅ 直连 |
-| 9 | **MGStage** | `mgstage.com` | ⚠️ 需 Cookie |
-| 10 | **Prestige** | `prestige-av.com` | ✅ 直连 |
-| 11 | **FC2** | `fc2.com` | ✅ 直连 |
-| 12 | **FC2PPVDB** | `fc2ppvdb.com` | ✅ 直连 |
-| 13 | **FC2Club** | `fc2club.top` | ✅ 直连 |
-| 14 | **ThePornDB** | `theporndb.net` | ✅ 免费 API |
-| 15 | **JavDay** | `javday.tv` | ✅ 直连 |
-| 16 | **Airav** | `airav.wiki` | ✅ 直连 |
-| 17 | **CableAV** | `cableav.tv` | ✅ 直连 |
-| 18 | **CNMDB** | `cnmdb.net` | ✅ 直连 |
-| 19 | **Dahlia** | `dahlia-av.jp` | ✅ 直连 |
-| 20 | **Fantastica** | `fantastica-vr.com` | ✅ 直连 |
-| 21 | **FreeJavBT** | `freejavbt.com` | ✅ 直连 |
-| 22 | **GIGA** | `giga-web.jp` | ⚠️ 需 Cookie |
-| 23 | **XCity** | `xcity.jp` | ✅ 直连 |
-| 24 | **Kin8** | `kin8tengoku.com` | ✅ 直连 |
-| 25 | **Love6** | `love6.tv` | ✅ 直连 |
-| 26 | **LuluBar** | `lulubar.co` | ✅ 直连 |
-| 27 | **MadouQu** | `madouqu.com` | ✅ 直连 |
-| 28 | **MMTV** | `7mmtv.sx` | ✅ 直连 |
-| 29 | **HDouban** | API | ✅ 直连 |
-| 30 | **HSCangku** | `hsck860.cc` | ✅ 直连 |
-| 31 | **MyWife** | `mywife.jp` | ✅ 直连 |
-| 32 | **Official** | 官方站 | ✅ 直连 |
-
-> 直连 = 无需任何配置，开箱即用
-> 需 Cookie = 可能需要登录或设置 Cookie 才能正常访问
-> Cloudflare = 服务器环境被 Cloudflare 拦截，本地运行正常
-
----
-
-## NFO 文件格式
-
-Kodi/Emby/Jellyfin 标准格式：
-
-```xml
-<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
-<movie>
-  <title>FNS-215 中文标题（已翻译）</title>
-  <sorttitle>FNS-215</sorttitle>
-  <originaltitle>FNS-215</originaltitle>
-  <set>系列名称</set>
-  <rating>8.5</rating>
-  <year>2026</year>
-  <mpaa>XXX</mpaa>
-  <premiered>2026-06-10</premiered>
-  <release>2026-06-10</release>
-  <runtime>120</runtime>
-  <studio>FALENO</studio>
-  <maker>FALENO</maker>
-  <label>FALENO</label>
-  <publisher>发行商</publisher>
-  <director>导演名</director>
-  <plot>简介描述</plot>
-  <outline>简介描述</outline>
-  <genre>JAV</genre>
-  <genre>Censored</genre>
-  <tag>标签1</tag>
-  <tag>标签2</tag>
-  <actor>
-    <name>女优名</name>
-    <role></role>
-    <thumb>女优头像URL</thumb>
-  </actor>
-  <artist>女优名</artist>
-  <id>FNS-215</id>
-  <num>FNS-215</num>
-  <cover>FNS-215-poster.jpg</cover>
-  <poster>FNS-215-poster.jpg</poster>
-  <thumb>FNS-215-thumb.jpg</thumb>
-  <fanart>FNS-215-fanart.jpg</fanart>
-</movie>
-```
-
----
-
-## 与 MDCx 对比
-
-| 功能 | JAV Scraper Pro | MDCx |
-|------|----------------|------|
-| **数据源** | **32 个** | 40+ |
-| **界面** | **命令行（终端）** | PyQt5 图形界面 |
-| **翻译** | **谷歌翻译（免费，无 Key）** | DeepL + YouDao + OpenAI |
-| **视频截图** | ✅ ffmpeg | ✅ |
-| **海报/背景/缩略图** | ✅ **自动生成** | ✅ |
-| **多源合并** | ✅ 优先级 fallback | ✅ |
-| **Kodi/Emby NFO** | ✅ 全字段 | ✅ 可自定义模板 |
-| **裁切位置** | **左/中/右 可选** | 自适应比例 |
-| **演员头像** | ✅ 部分源 | ✅ 多数源 |
-| **FC2 支持** | ✅ FC2/FC2PPVDB/FC2Club | ✅ FC2 系列 |
-| **JSON 输出** | ✅ 支持 | ❌ |
-| **Docker 部署** | ❌ | ✅ FastAPI + Docker |
-| **文件重命名** | ❌ 需手动 | ✅ 模板系统 |
-| **NFO 模板自定义** | ❌ 固定格式 | ✅ 可自定义 |
-| **批量处理** | ❌ 逐个 | ✅ GUI 批量 |
-| **额外源** | ❌ 还差 30+ | ✅ 国产/独立站 |
-
-### MDCx 独有功能（本项目暂不支持）
-
-- DMM/FANZA 官方源
-- FC2Hub 额外源
-- Getchu（动漫/游戏）
-- 国产 AV（麻豆/91 等）
-- 文件自动重命名整理
-- NFO 模板自定义
-- FastAPI 服务端 + Docker
-- GUI 批量操作
-
----
-
-## 项目结构
-
-```
-jav-scraper-pro/
-├── jav_scraper/
-│   ├── __init__.py           # 包初始化
-│   ├── metadata.py           # 数据模型（JavMetadata, Actor）
-│   ├── http_client.py        # HTTP 请求客户端
-│   ├── sources/              # 32 个数据源（每个单独文件）
-│   │   └── *.py              # 每个源一个爬虫
-│   ├── orchestrator.py       # 多源合并 + 自动 fallback
-│   ├── translator.py         # 免费谷歌翻译
-│   ├── image_processor.py    # 图片处理（裁图/模糊背景）
-│   ├── video_processor.py    # ffmpeg 视频截图
-│   ├── nfo_generator.py      # NFO 生成器
-│   └── cli.py                # 命令行入口
-├── setup.py                  # 安装配置
-├── requirements.txt          # 依赖列表
-├── .gitignore
-└── README.md                 # 本文件（中英双语）
-```
-
----
-
-## 许可证
+## License
 
 MIT
