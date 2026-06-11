@@ -64,8 +64,9 @@ def build_nfo(meta: JavMetadata) -> str:
     # originaltitle = just the number (NOT the JP title)
     _text_element(root, "originaltitle", num)
 
-    # Set (always empty like working sample)
-    _text_element(root, "set", "")
+    # Set (always present, empty like working sample)
+    set_el = SubElement(root, "set")
+    set_el.text = ""
 
     # Rating
     _text_element(root, "rating", meta.score or "0.0")
@@ -122,15 +123,13 @@ def build_nfo(meta: JavMetadata) -> str:
     _text_element(root, "thumb", f"{num}-thumb.jpg")
     _text_element(root, "fanart", f"{num}-fanart.jpg")
 
-    # Art section
-    art = SubElement(root, "art")
-    _text_element(art, "poster", f"{num}-poster.jpg")
-    _text_element(art, "fanart", f"{num}-fanart.jpg")
-
-    # Convert to XML string
+    # Convert to XML string with proper declaration
     rough_string = tostring(root, encoding="unicode")
     dom = xml.dom.minidom.parseString(rough_string)
-    return dom.toprettyxml(indent="  ")
+    xml_str = dom.toprettyxml(indent="  ")
+    # Use exact declaration matching working FNS-215 sample
+    xml_str = '<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>\n' + '\n'.join(xml_str.split('\n')[1:])
+    return xml_str
 
 
 def write_nfo(meta: JavMetadata, output_path: str) -> bool:
