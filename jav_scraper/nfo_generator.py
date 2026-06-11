@@ -5,12 +5,22 @@ Matches the verified working format from user's FNS-215 sample.
 """
 import logging
 import os
+import re
 import xml.dom.minidom
 from xml.etree.ElementTree import Element, SubElement, tostring
 
 from jav_scraper.metadata import JavMetadata
 
 logger = logging.getLogger(__name__)
+
+
+def _normalize_number(number: str) -> str:
+    """Normalize JAV number to always include hyphen (e.g. ABF358 → ABF-358)."""
+    # Pattern: letters followed by digits with no hyphen
+    m = re.match(r'^([A-Za-z]+)(\d+)$', number)
+    if m:
+        return f"{m.group(1)}-{m.group(2)}"
+    return number
 
 
 def _text_element(parent: Element, tag: str, text: str | None) -> None:
@@ -54,10 +64,11 @@ def build_nfo(meta: JavMetadata) -> str:
     """
     root = Element("movie")
 
-    num = meta.number
+    num = _normalize_number(meta.number)
 
-    # Title: "番号 日语标题" (same as working FNS-215 format)
-    title_text = f"{num} {meta.title_jp}" if meta.title_jp else num
+    # Title: "番号 中文标题" (prefer Chinese translation, fallback to Japanese)
+    title = meta.title_cn or meta.title_jp or ""
+    title_text = f"{num} {title}" if title else num
     _text_element(root, "title", title_text)
     _text_element(root, "sorttitle", num)
 
@@ -87,13 +98,13 @@ def build_nfo(meta: JavMetadata) -> str:
     # Runtime
     _text_element(root, "runtime", meta.runtime)
 
-    # Studio hierarchy
-    _text_element(root, "studio", meta.studio or meta.maker or "FALENO")
-    _text_element(root, "maker", meta.maker or meta.studio or "FALENO")
-    _text_element(root, "label", meta.label or meta.studio or meta.maker or "FALENO")
+    # Studio hierarchy (fallback to empty if not found)
+    _text_element(root, "studio", meta.studio or "")
+    _text_element(root, "maker", meta.maker or "")
+    _text_element(root, "label", meta.label or "")
 
-    # Plot = same as title (working format)
-    plot_text = f"{num} {meta.title_jp}" if meta.title_jp else num
+    # Plot = same as title (Chinese preferred)
+    plot_text = f"{num} {title}" if title else num
     _text_element(root, "plot", plot_text)
     _text_element(root, "outline", plot_text)
 

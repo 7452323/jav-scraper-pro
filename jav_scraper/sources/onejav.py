@@ -105,7 +105,7 @@ def scrape(number: str) -> JavMetadata | None:
         meta.release = f"{date_match.group(1)}-{date_match.group(2)}-{date_match.group(3)}"
         meta.year = date_match.group(1)
 
-    # --- Cover image ---
+    # --- Cover image + studio ---
     cover_match = re.search(
         r'<meta\s+property="og:image"[^>]*content="([^"]+)"',
         html, re.IGNORECASE
@@ -113,6 +113,12 @@ def scrape(number: str) -> JavMetadata | None:
     if cover_match:
         meta.cover_url = cover_match.group(1).strip()
         meta.poster_url = meta.cover_url
+        # Extract studio from image URL: /images/prestige/abf/ → Prestige
+        studio_match = re.search(r'/images/([^/]+)/', meta.cover_url, re.IGNORECASE)
+        if studio_match:
+            meta.studio = studio_match.group(1).strip().capitalize()
+            meta.maker = meta.studio
+            meta.label = meta.studio
     else:
         img_match = re.search(
             r'<img[^>]*class="image"[^>]*src="([^"]+)"',
