@@ -1,5 +1,4 @@
-"""OneJAV scraper (onejav.com)."""
-
+"""OneJAV scraper (onejav.com) — JAV torrent site with Japanese metadata."""
 import re
 
 from jav_scraper.metadata import Actor, JavMetadata
@@ -8,114 +7,123 @@ from jav_scraper.http_client import fetch_text
 BASE_URL = "https://onejav.com"
 
 
-def scrape(number: str) -> JavMetadata | None:
-    """Scrape metadata from OneJAV."""
-    url = f"{BASE_URL}/search/{number.lower()}/"
-    html = fetch_text(url)
-    if not html:
-        return None
-
-    # Find the best matching result link (prefer exact match over first)
+def _find_torrent_page(number: str, html: str) -> str | None:
+    """Find the torrent page link from search results."""
+    num_lower = number.lower().replace("-", "")
     all_links = re.findall(
-        r'<a\s+href="(/(?:movie|torrent)/[^"]+)"[^>]*>\s*([^<]+)',
+        r'<a\s+href="(/(?:torrent)/[^"]+)"[^>]*>\s*([^<]+)',
         html,
         re.IGNORECASE,
     )
-
-    best_match = None
-    num_lower = number.lower().replace("-", "")
     for link_href, link_text in all_links:
         link_clean = link_text.strip().lower().replace("-", "")
-        # Exact match (without hyphens) — perfect
         if link_clean == num_lower:
-            best_match = link_href
-            break
-        # Partial match — use if no perfect found
-        if num_lower in link_href.lower() and not best_match:
-            best_match = link_href
+            return link_href
+    # fallback: any link containing the number
+    for link_href, link_text in all_links:
+        if num_lower in link_href.lower():
+            return link_href
+    return None
 
-    if not best_match:
-        return None
 
-    movie_url = BASE_URL + best_match
-    html = fetch_text(movie_url)
-    if not html:
-        return None
+def scrape(number: str) -> JavMetadata | None:
+    """Scrape metadata from OneJAV."""
+    num = number.upper().strip()
+    num_lower = number.lower()
+
+    # Try direct torrent page first
+    html = fetch_text(f"{BASE_URL}/torrent/{num_lower}")
+    if not html or "torrent" not in html.lower():
+        # Fallback: search
+        html = fetch_text(f"{BASE_URL}/search/{num_lower}/")
+        if not html:
+            return None
+        link = _find_torrent_page(num, html)
+        if not link:
+            return None
+        html = fetch_text(BASE_URL + link)
+        if not html:
+            return None
 
     meta = JavMetadata(
-        number=number.upper(),
+        number=num,
         source="onejav",
         mosaic="Censored",
     )
 
-    # Title
+    # --- Japanese title ---
+    # 1. Try <p class="level has-text-grey-dark"> (the main Japanese title display)
     title_match = re.search(
-        r'<title>\s*(.*?)\s*</title>', html, re.IGNORECASE | re.DOTALL
+        r'<p\s+class="level\s+has-text-grey-dark">\s*([^<]+)\s*</p>',
+        html, re.IGNORECASE
     )
     if title_match:
         meta.title_jp = title_match.group(1).strip()
-        # Clean " - OneJAV.com - Free JAV Torrents" suffix
-        meta.title_jp = re.sub(
-            r'\s*[-–|]\s*OneJAV\..*$', '', meta.title_jp, flags=re.IGNORECASE
-        ).strip()
+    else:
+        # 2. Try meta description (contains Japanese title)
+        desc_match = re.search(
+            r'<meta\s+name="description"[^>]*content="[^"]*-\s*([^"]+?)\s*,\s*Actress:',
+            html, re.IGNORECASE
+        )
+        if desc_match:
+            meta.title_jp = desc_match.group(1).strip()
+        else:
+            # 3. Try OG description
+            og_desc = re.search(
+                r'<meta\s+property="og:description"[^>]*content="[^"]*-\s*([^"]+?)\s*,\s*Actress:',
+                html, re.IGNORECASE
+            )
+            if og_desc:
+                meta.title_jp = og_desc.group(1).strip()
+            else:
+                # 4. Fallback: <title> tag
+                title_tag = re.search(
+                    r'<title>\s*(.*?)\s*</title>', html, re.IGNORECASE | re.DOTALL
+                )
+                if title_tag:
+                    meta.title_jp = title_tag.group(1).strip()
+                    meta.title_jp = re.sub(
+                        r'\s*[-–|]\s*OneJAV\..*$', '', meta.title_jp, flags=re.IGNORECASE
+                    ).strip()
 
-    # Actors
+    # --- Actors ---
+    # OneJAV uses /actress/ links (not /actor/)
     actor_matches = re.findall(
-        r'<a\s+href="/actor/[^"]+"[^>]*>([^<]+)</a>',
-        html,
-        re.IGNORECASE,
+        r'<a\s+class="panel-block"[^>]*href="/actress/[^"]+"[^>]*>([^<]+)</a>',
+        html, re.IGNORECASE
     )
     for name in actor_matches:
         meta.actors.append(Actor(name=name.strip(), role="actor"))
 
-    # Date
+    # --- Date ---
+    # OneJAV breadcrumb: <li><a href="/2026/01/08">Jan. 8, 2026</a></li>
     date_match = re.search(
-        r'<strong>Date:</strong>\s*([^<\s]+)', html, re.IGNORECASE
+        r'href="/(\d{4})/(\d{2})/(\d{2})">',
+        html, re.IGNORECASE
     )
     if date_match:
-        meta.release = date_match.group(1).strip()
+        meta.release = f"{date_match.group(1)}-{date_match.group(2)}-{date_match.group(3)}"
+        meta.year = date_match.group(1)
 
-    # Runtime
-    runtime_match = re.search(
-        r'<strong>Duration:</strong>\s*(\d+)', html, re.IGNORECASE
-    )
-    if runtime_match:
-        meta.runtime = runtime_match.group(1).strip()
-
-    # Tags
-    tags = re.findall(
-        r'<a\s+href="/tag/[^"]+"[^>]*>([^<]+)</a>',
-        html,
-        re.IGNORECASE,
-    )
-    meta.tags = [t.strip() for t in tags if t.strip()]
-
-    # Cover image — try multiple patterns (class may come before or after src)
+    # --- Cover image ---
     cover_match = re.search(
-        r'<img[^>]*class="[^"]*image[^"]*"[^>]*src="([^"]+\.(?:jpg|jpeg|png)(?:\?[^"]*)?)"',
-        html,
-        re.IGNORECASE,
+        r'<meta\s+property="og:image"[^>]*content="([^"]+)"',
+        html, re.IGNORECASE
     )
-    if not cover_match:
-        cover_match = re.search(
-            r'<img\s+[^>]*class="[^"]*hw-image[^"]*"[^>]*src="([^"]+)"',
-            html,
-            re.IGNORECASE,
-        )
-    if not cover_match:
-        cover_match = re.search(
-            r'<img\s+[^>]*src="([^"]+)"[^>]*class="[^"]*hw-image[^"]*"',
-            html,
-            re.IGNORECASE,
-        )
     if cover_match:
         meta.cover_url = cover_match.group(1).strip()
-        # Skip static/internal images
-        if "static" in meta.cover_url or meta.cover_url.startswith("/"):
-            meta.cover_url = None
-
-    # Poster
-    if meta.cover_url:
         meta.poster_url = meta.cover_url
+    else:
+        img_match = re.search(
+            r'<img[^>]*class="image"[^>]*src="([^"]+)"',
+            html, re.IGNORECASE
+        )
+        if img_match:
+            meta.cover_url = img_match.group(1).strip()
+            meta.poster_url = meta.cover_url
+
+    # Check if we got real data
+    if not meta.title_jp and not meta.cover_url:
+        return None
 
     return meta
