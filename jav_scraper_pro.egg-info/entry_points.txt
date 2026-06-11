@@ -1,2 +1,0 @@
-[console_scripts]
-jav-scraper = jav_scraper.cli:main
