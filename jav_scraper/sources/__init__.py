@@ -25,6 +25,8 @@ def _register(name: str, priority: int) -> None:
         SOURCES.append((name, mod.scrape, priority))
 
 
+# --- JAVCL (WordPress, globally accessible — highest priority) ---
+_register("javcl", 0)
 # --- Existing sources (priority 1-7) ---
 _register("javbus", 1)
 _register("javdb", 2)
@@ -34,7 +36,6 @@ _register("avsex", 5)
 _register("onejav", 6)
 _register("faleno", 7)
 
-# --- DMM/FANZA ---
 _register("dmm", 7)
 
 # --- 7mmtv.sx (globally accessible) ---
