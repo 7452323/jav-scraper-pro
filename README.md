@@ -2,21 +2,16 @@
 
 <div align="center">
 
-[![Python](https://img.shields.io/badge/Python-3.9+-3776AB.svg?logo=python&logoColor=white)]()
-[![License](https://img.shields.io/badge/License-MIT-green.svg)]()
+
+**English | 中文**
 
 **Multi-source JAV metadata scraper — 32 data sources, free Google Translate, video screenshots, full NFO.**
-
-<br>
-
-<a href="#en">📖 English</a> &nbsp;·&nbsp; <a href="#zh">📖 中文</a>
 
 </div>
 
 ---
 
-<a name="en"></a>
-# 📖 English Documentation
+# English Documentation
 
 ## Overview
 
@@ -353,8 +348,7 @@ MIT
 
 ---
 
-<a name="zh"></a>
-# 📖 中文文档
+# 中文文档
 
 ## 概述
 
