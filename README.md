@@ -144,6 +144,48 @@ jav-scraper-pro/
 └── README.md
 ```
 
+## Comparison with MDCx
+
+| 特性 | JAV Scraper Pro | MDCx |
+|------|----------------|------|
+| **数据源** | 7个（OneJAV/JavDB/JavBus/Faleno/AVSOX/AVSEX/JavLibrary） | 40+（含FC2/国产/独立站/Getchu等） |
+| **语言** | Python CLI | Python + PyQt5 GUI |
+| **翻译** | DeepSeek LLM | DeepL + YouDao + OpenAI LLM |
+| **视频截图** | ✅ ffmpeg | ✅ |
+| **批量处理** | CLI 循环 | GUI 批量选择 |
+| **Docker 部署** | ❌ | ✅ FastAPI + Docker |
+| **NFO 格式** | Kodi/Emby 兼容 XML | Kodi/Emby 兼容 XML（可自定义模板） |
+| **图片裁切** | left/center/right | 自适应比例裁切 |
+| **文件重命名** | ❌（需手动） | ✅ 模板命名系统 |
+| **演员头像** | ✅ 部分源支持 | ✅ 多数源支持 |
+| **多源合并** | ✅ 优先级fallback | ✅ 自动 |
+
+**MDCx 能做但我们还没做的：**
+- FC2 / 国产 / 独立工作室等 30+ 额外数据源
+- 文件自动重命名与整理
+- NFO 模板自定义
+- Docker 部署 / FastAPI 接口
+- GUI 批量操作
+
+### 数据源对照
+
+| 源 | JAV Scraper Pro | MDCx |
+|----|----------------|------|
+| OneJAV | ✅ | ❌ |
+| JavDB | ✅ | ✅ |
+| JavBus | ✅ | ✅ |
+| FALENO | ✅ | ✅ |
+| AVSOX | ✅ | ✅ |
+| AVSEX | ✅ | ✅ |
+| JavLibrary | ✅ | ✅ |
+| DMM/FANZA | ❌ | ✅ |
+| MGStage | ❌ | ✅ |
+| Prestige | ❌ | ✅ |
+| FC2/FC2Club/FC2Hub/FC2PPVDB | ❌ | ✅ |
+| ThePornDB | ❌ | ✅ |
+| 国产（麻豆/91等） | ❌ | ✅ |
+| CableAV/CNMDB/iQqtv等 | ❌ | ✅ |
+
 ## License
 
 MIT
