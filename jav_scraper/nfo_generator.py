@@ -108,10 +108,13 @@ def build_nfo(meta: JavMetadata) -> str:
     _text_element(root, "plot", plot_text)
     _text_element(root, "outline", plot_text)
 
-    # Genres — minimal like working sample
-    # Always add JAV + Censored/Uncensored
+    # Genres — JAV + mosaic + all available tags
     _text_element(root, "genre", "JAV")
     _text_element(root, "genre", meta.mosaic or "Censored")
+    if meta.tags:
+        for tag in meta.tags:
+            if tag and tag not in ("JAV", meta.mosaic, "Censored", "Uncensored"):
+                _text_element(root, "genre", tag)
 
     # Actors
     _actors_element(root, meta, num)

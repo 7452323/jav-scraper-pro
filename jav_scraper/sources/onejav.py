@@ -86,6 +86,14 @@ def scrape(number: str) -> JavMetadata | None:
                         r'\s*[-–|]\s*OneJAV\..*$', '', meta.title_jp, flags=re.IGNORECASE
                     ).strip()
 
+    # --- Tags ---
+    # OneJAV uses <a class="tag is-light" href="/tag/...">Tag Name</a>
+    tag_matches = re.findall(
+        r'<a\s+class="tag\s+is-light"[^>]*href="/tag/[^"]+"[^>]*>([^<]+)</a>',
+        html, re.IGNORECASE
+    )
+    meta.tags = [t.strip() for t in tag_matches if t.strip()]
+
     # --- Actors ---
     # OneJAV uses /actress/ links (not /actor/)
     actor_matches = re.findall(
