@@ -13,13 +13,31 @@ def _merge_metadata(
     primary: JavMetadata, secondary: JavMetadata
 ) -> JavMetadata:
     """Merge secondary metadata into primary, filling in missing fields."""
+
+    def _looks_fake(title: str) -> bool:
+        """Check if a title looks like a block/redirect page, not real content."""
+        if not title:
+            return True
+        fake_patterns = [
+            'age verification', 'access denied', 'loading...',
+            'just a moment', 'please verify', 'challenge-platform',
+            'survey-smiles', 'service integration',
+        ]
+        return any(p in title.lower() for p in fake_patterns)
+
     merged = JavMetadata(
         number=primary.number or secondary.number,
         source=primary.source or secondary.source,
     )
 
-    # Titles: prefer primary, fall back to secondary
-    merged.title_jp = primary.title_jp or secondary.title_jp
+    # Titles: prefer primary, fall back to secondary, skip fake titles
+    merged.title_jp = (
+        primary.title_jp
+        if primary.title_jp and not _looks_fake(primary.title_jp)
+        else secondary.title_jp
+        if secondary.title_jp and not _looks_fake(secondary.title_jp)
+        else ""
+    )
     merged.title_cn = primary.title_cn or secondary.title_cn
     merged.title_en = primary.title_en or secondary.title_en
 

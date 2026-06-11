@@ -35,31 +35,23 @@ def scrape(number: str) -> JavMetadata | None:
         if not html:
             return None
 
-    # Check for age verification / blocked pages
-    if re.search(r'age.?verification|please.?verify|Access Denied|Just a moment|challenge-platform', html, re.IGNORECASE):
-        return None
+        # Find movie link from search results
+        match = re.search(
+            r'<a\s+class="movie-box"[^>]*href="([^"]+)"',
+            html,
+            re.IGNORECASE,
+        )
+        if not match:
+            return None
 
-    # First, check if the initial direct page had a real movie-box (indicating search results)
-    # If we went to /FNS-151 directly and got a search results page
-    movie_link_match = re.search(
-        r'<a\s+class="movie-box"[^>]*href="([^"]+)"',
-        html,
-        re.IGNORECASE,
-    )
-
-    if movie_link_match:
-        # We got search results instead of a direct page
-        movie_url = movie_link_match.group(1)
+        movie_url = match.group(1)
+        # If relative URL, prepend domain
         if movie_url.startswith("/"):
             movie_url = DOMAINS[0] + movie_url
+
         html = fetch_text(movie_url)
         if not html:
             return None
-    # If no movie-box link found, maybe we hit the actual page directly
-    # Check if this is actually a product page (has known JavBus fields)
-    elif not re.search(r'发行时间|制作商|star/', html, re.IGNORECASE):
-        # Not a real JavBus product page
-        return None
 
     meta = JavMetadata(
         number=num,

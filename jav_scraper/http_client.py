@@ -1,4 +1,6 @@
-"""HTTP client with retry and session management."""
+"""HTTP client with retry, session management, and proxy support."""
+
+import os
 
 import requests
 
@@ -10,6 +12,13 @@ USER_AGENT = (
 
 _session = requests.Session()
 _session.headers.update({"User-Agent": USER_AGENT})
+
+# Proxy support: respect HTTPS_PROXY / HTTP_PROXY env vars
+_proxy_url = os.environ.get("HTTPS_PROXY") or os.environ.get("https_proxy") or ""
+if _proxy_url:
+    _session.proxies.update({"https": _proxy_url, "http": _proxy_url})
+    import logging
+    logging.getLogger(__name__).info("Using proxy: %s", _proxy_url)
 
 
 def get_session() -> requests.Session:

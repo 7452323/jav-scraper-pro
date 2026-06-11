@@ -78,7 +78,7 @@ def _scrape_page(html: str) -> JavMetadata | None:
     # --- Check if this is a valid product page ---
     # DMM returns service messages for retired products
     if meta.title_jp and re.search(
-        r'サービス[統合終了]|移行|お知らせ|メンテナンス|404|Not Found',
+        r'サービス統合|サービス終了|お知らせ|404|Not Found',
         meta.title_jp, re.IGNORECASE
     ):
         return None

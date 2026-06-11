@@ -21,25 +21,6 @@ def _try_fetch(path: str) -> str:
     return ""
 
 
-def _is_valid_page(html: str) -> bool:
-    """Check if the page contains actual JAV content vs redirect/survey."""
-    # Block known fake pages
-    blocklist = [
-        'Loading...', 'survey-smiles', 'Just a moment',
-        'age.verification', 'Access Denied', 'challenge-platform',
-    ]
-    for b in blocklist:
-        if re.search(b, html, re.IGNORECASE):
-            return False
-    # Must have at least some JAV metadata markers
-    has_content = bool(re.search(
-        r'発売日|メーカー|star/|genre/|sample-box', html, re.IGNORECASE
-    ))
-    if not has_content:
-        return False
-    return True
-
-
 def scrape(number: str) -> JavMetadata | None:
     """Scrape metadata from AVSOX."""
     num = number.upper()
@@ -72,10 +53,6 @@ def scrape(number: str) -> JavMetadata | None:
         html = _try_fetch(path if path.startswith("/") else f"/{path}")
         if not html:
             return None
-
-    # Validate page content
-    if not _is_valid_page(html):
-        return None
 
     meta = JavMetadata(
         number=num,
