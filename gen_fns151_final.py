@@ -73,32 +73,39 @@ with open(nfo_path, 'w', encoding='utf-8') as f:
     f.write(nfo_xml)
 print('NFO:', nfo_path)
 
-# 2. Download cover
-cover_path = os.path.join(outdir, f'{base}-poster.jpg')
-if m.cover_url:
+# 2. Poster — crop right side (vertical)
+from jav_scraper.image_processor import generate_poster, generate_fanart, generate_thumb
+poster_path = os.path.join(outdir, f'{base}-poster.jpg')
+if generate_poster(m.cover_url, poster_path, cut='right'):
+    print('Poster:', poster_path, f'(cropped right)')
+else:
+    # Fallback: download raw
     import requests
     r = requests.get(m.cover_url, headers={'User-Agent': 'Mozilla/5.0'}, timeout=30)
     if r.status_code == 200:
-        with open(cover_path, 'wb') as f:
+        with open(poster_path, 'wb') as f:
             f.write(r.content)
-        print('Cover:', cover_path, f'({len(r.content)} bytes)')
+        print('Poster (raw fallback):', poster_path)
 
-# 3. Fanart
-from jav_scraper.image_processor import generate_fanart, generate_thumb
+# 3. Fanart (blurred background)
 fanart_path = os.path.join(outdir, f'{base}-fanart.jpg')
 if generate_fanart(m.cover_url, fanart_path, blur=True):
     print('Fanart:', fanart_path)
 
-# 4. Thumb
+# 4. Thumb — use the poster (already cropped) as source
 thumb_path = os.path.join(outdir, f'{base}-thumb.jpg')
-if generate_thumb(m.cover_url, thumb_path):
+from PIL import Image as PILImage
+if os.path.exists(poster_path):
+    thumb_img = PILImage.open(poster_path)
+    thumb_img.thumbnail((200, 300), PILImage.LANCZOS)
+    thumb_img.save(thumb_path, quality=85)
     print('Thumb:', thumb_path)
 
 # Package
 import tarfile
 tar_path = os.path.join(outdir, 'fns151_final.tar.gz')
 with tarfile.open(tar_path, 'w:gz') as tar:
-    for f in [nfo_path, cover_path, fanart_path, thumb_path]:
+    for f in [nfo_path, poster_path, fanart_path, thumb_path]:
         if os.path.exists(f):
             tar.add(f, arcname=os.path.basename(f))
 print('Archive:', tar_path)
