@@ -3,7 +3,7 @@
 [![Python](https://img.shields.io/badge/Python-3.9+-3776AB.svg?logo=python&logoColor=white)]()
 [![License](https://img.shields.io/badge/License-MIT-green.svg)]()
 
-**Multi-source JAV metadata scraper — 33 data sources, free multi-engine translation, batch directory scan, video screenshots, full NFO.**
+**Multi-source JAV metadata scraper — 33 data sources, free multi-engine translation, batch directory scan, full NFO + covers. Does NOT download videos.**
 
 [📖 English](#english-documentation) · [📖 中文](#中文文档)
 
@@ -13,7 +13,54 @@
 
 ## Overview
 
-JAV Scraper Pro fetches metadata for Japanese Adult Videos (JAV) from 33 websites, merges results, translates titles/plots to Chinese (free, multi-engine fallback), extracts video screenshots, and generates Kodi/Emby/Jellyfin-compatible NFO + poster/fanart/thumb images.
+**This tool is designed for users without a PC.** Typical setup: use 115 / offline download to get video files on your phone/tablet/NAS, then run this tool to scrape NFO + covers for VidHub / SenPlayer / Emby / Jellyfin.
+
+### ❗ What this tool IS
+
+✅ Scrapes metadata from 33 websites (title, actors, release date, runtime, studio, tags, plot, cover art)  
+✅ Generates Kodi-compatible NFO files  
+✅ Generates poster / fanart / thumb images from cover art  
+✅ Batch scans a folder — auto-detects JAV numbers from filenames, scrapes all at once  
+✅ Translates Japanese titles/plots/tags to Chinese (free, multi-engine fallback: Google → MyMemory → PONS)  
+✅ Extracts video screenshots if ffmpeg is installed and video files exist  
+✅ Works entirely over CLI — no GUI needed, runs on servers / NAS / VPS / cheap cloud instances  
+✅ All 33 sources registered and active — but some may be blocked depending on your server's region  
+
+### ❌ What this tool is NOT
+
+❌ **Does NOT download or torrent any video files** — you bring your own videos  
+❌ **Does NOT stream or play video** — that's VidHub/SenPlayer's job  
+❌ **Does NOT have a GUI** — pure CLI  
+❌ **Does NOT require a computer** — runs on any Linux server / VPS / NAS
+
+### Typical workflow (no-PC setup)
+
+```
+1.  Find JAV torrent / magnet link on phone
+2.  Offline download to 115 cloud → get video files on your storage
+3.  Put video files in a folder (on NAS / cloud drive / server)
+4.  Run: jav-scraper scan /path/to/videos/ --translate --merge
+5.  Each video folder now has: NFO + poster.jpg + fanart.jpg + thumb.jpg
+6.  Open with VidHub / SenPlayer — covers and metadata show automatically
+```
+
+### Data sources (33 total)
+
+| # | Source | Type | Access |
+|---|--------|------|--------|
+| 1 | **JavBus** | javbus.com | ⚠️ Blocked outside CN/JP |
+| 2 | **JavDB** | javdb.com | ❌ Cloudflare |
+| 3 | **JavLibrary** | javlibrary.com | ✅ |
+| 4 | **AVSOX** | avsox.how | ⚠️ Survey redirect sometimes |
+| 5 | **AVSEX** | avsex.xyz | ✅ |
+| 6 | **OneJAV** | onejav.com | ✅ |
+| 7 | **FALENO** | faleno.jp | ✅ |
+| 8 | **DMM/FANZA** | dmm.co.jp | ⚠️ Blocks non-JP IPs |
+| 9 | **Jav321** | jav321.com | ✅ |
+| 10 | **MGStage** | mgstage.com | ⚠️ Cookie needed |
+| 11–33 | Prestige, FC2, FC2PPVDB, FC2Club, ThePornDB, JavDay, Airav, CableAV, CNMDB, Dahlia, Fantastica, FreeJavBT, GIGA, XCity, Kin8, Love6, LuluBar, MadouQu, MMTV, HDouban, HSCangku, MyWife, Official | Various | ✅ Most accessible |
+
+If one source is blocked, the tool automatically falls through to the next. The more sources, the better the chance of getting full metadata.
 
 ### What it does
 
@@ -22,7 +69,7 @@ JAV Scraper Pro fetches metadata for Japanese Adult Videos (JAV) from 33 website
 3. **Translate** — **Free multi-engine**: Google → MyMemory → PONS (auto-fallback, no API keys)
 4. **Batch Scan** — Scan a folder, auto-detect all JAV numbers, scrape everything at once
 5. **Process** — Generate poster/fanart/thumb images from cover art
-6. **Screenshot** — Extract frames from video files via ffmpeg
+6. **Screenshot** — Extract frames from video files via ffmpeg (video files required)
 7. **Output** — Kodi/Emby NFO + images ready for your media library
 
 ### What's new in v0.2.0
@@ -316,7 +363,52 @@ MIT
 
 ## 概述
 
-JAV Scraper Pro 是一个多源 JAV 元数据刮削工具。输入番号（如 `FNS-215`），自动从 33 个网站抓取数据，合并最佳结果，生成 Kodi/Emby/Jellyfin 兼容的 NFO 文件和海报图片。
+**这个工具专门为没有电脑的用户设计。** 你不需要 PC，只需要一台能跑 Linux 的服务器/VPS/云函数，就能给你的视频批量刮削 NFO 和封面，配合 VidHub / SenPlayer / Emby 使用。
+
+### ❗ 这个工具能做什么
+
+✅ 从 33 个网站自动抓取元数据（标题、演员、日期、时长、片商、标签、简介、封面）  
+✅ 生成 Kodi/Emby/Jellyfin 兼容的 NFO 文件  
+✅ 从横版封面自动裁切竖版 poster + 横版 fanart + 缩略图  
+✅ **批量扫描文件夹** — 自动识别文件名中的番号，一次性全部刮完  
+✅ **多引擎免费翻译** — Google → MyMemory → PONS 自动降级，全部免费无需 Key  
+✅ 如果装了 ffmpeg，可从视频文件提取截图  
+✅ 纯 CLI，无 GUI 需求，跑在服务器/VPS/NAS/云函数上
+
+### ❌ 这个工具不做什么
+
+❌ **不下载任何视频** — 视频文件你自己搞定（115离线、BT、磁力随便你）  
+❌ **不播放视频** — 那是 VidHub/SenPlayer 的事  
+❌ **不需要电脑** — 手机+服务器就够了
+
+### 典型使用流程（无 PC 场景）
+
+```
+1. 手机找番号/磁力链接
+2. 115 离线下载 → 得到视频文件
+3. 视频文件放到服务器/NAS的某个文件夹
+4. 执行：jav-scraper scan /path/to/videos/ --translate --merge
+5. 每个视频目录自动生成：NFO + poster.jpg + fanart.jpg + thumb.jpg
+6. VidHub / SenPlayer 打开 → 封面和元数据自动显示
+```
+
+### 数据源列表（共 33 个）
+
+| # | 源 | 地址 | 可访问性 |
+|---|------|------|---------|
+| 1 | **JavBus** | javbus.com | ⚠️ 非 CN/JP 可能被拦 |
+| 2 | **JavDB** | javdb.com | ❌ Cloudflare |
+| 3 | **JavLibrary** | javlibrary.com | ✅ |
+| 4 | **AVSOX** | avsox.how | ⚠️ 偶有跳转调查页 |
+| 5 | **AVSEX** | avsex.xyz | ✅ |
+| 6 | **OneJAV** | onejav.com | ✅ |
+| 7 | **FALENO** | faleno.jp | ✅ |
+| 8 | **DMM/FANZA** | dmm.co.jp | ⚠️ 非日本 IP 屏蔽 |
+| 9 | **Jav321** | jav321.com | ✅ |
+| 10 | **MGStage** | mgstage.com | ⚠️ 需 Cookie |
+| 11–33 | Prestige, FC2, FC2PPVDB, FC2Club, ThePornDB 等 23 个 | 各站 | ✅ 大部分可访问 |
+
+某个源被拦了会自动跳到下一个，源越多越容易刮到完整数据。
 
 ### 功能一览
 
