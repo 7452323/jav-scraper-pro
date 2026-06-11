@@ -1,143 +1,87 @@
-"""DeepSeek LLM translation for JAV metadata."""
+"""Free Google Translate for JAV metadata. No API key needed."""
 
-import json
 import logging
-import os
+import re
+
+from deep_translator import GoogleTranslator
 
 logger = logging.getLogger(__name__)
 
-
-def _get_client():
-    """Lazy-import openai to avoid dependency at module load."""
-    try:
-        from openai import OpenAI
-    except ImportError:
-        logger.error("openai package not installed. Run: pip install openai")
-        return None
-
-    api_key = os.getenv("DEEPSEEK_API_KEY") or os.getenv("OPENAI_API_KEY")
-    if not api_key:
-        logger.warning(
-            "No DEEPSEEK_API_KEY or OPENAI_API_KEY set in environment"
-        )
-        return None
-
-    base_url = os.getenv(
-        "DEEPSEEK_BASE_URL", "https://api.deepseek.com"
-    )
-
-    return OpenAI(api_key=api_key, base_url=base_url)
+_translator_cache = {}
 
 
-def translate_title(
-    jp_title: str, target_lang: str = "chinese"
-) -> str:
-    """Translate a Japanese title to the target language using DeepSeek."""
-    if not jp_title or not jp_title.strip():
+def _get_translator(source="ja", target="zh-CN"):
+    """Get cached GoogleTranslator instance."""
+    key = f"{source}→{target}"
+    if key not in _translator_cache:
+        _translator_cache[key] = GoogleTranslator(source=source, target=target)
+    return _translator_cache[key]
+
+
+def translate(text: str, source="ja", target="zh-CN") -> str:
+    """Translate text using free Google Translate."""
+    if not text or not text.strip():
         return ""
-
-    client = _get_client()
-    if not client:
-        return jp_title
-
-    lang_names = {
-        "chinese": "Chinese",
-        "english": "English",
-        "cn": "Chinese",
-        "en": "English",
-    }
-    lang = lang_names.get(target_lang.lower(), target_lang.capitalize())
-
+    # Only skip if text has ZERO Japanese kana AND ZERO kanji (pure Chinese/English)
+    has_jp_kana = bool(re.search(r'[\u3040-\u309f\u30a0-\u30ff]', text))
+    if not has_jp_kana:
+        # No kana - might be Chinese or English, skip
+        cn_chars = sum(1 for c in text if '\u4e00' <= c <= '\u9fff')
+        if cn_chars > len(text) * 0.3:
+            return text
     try:
-        model = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
-
-        prompt = (
-            f"Translate the following Japanese adult video title to {lang}. "
-            f"Keep the original meaning. Only return the translated text, "
-            f"nothing else.\n\nTitle: {jp_title}"
-        )
-
-        resp = client.chat.completions.create(
-            model=model,
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.1,
-            max_tokens=200,
-        )
-
-        translated = resp.choices[0].message.content.strip()
-        return translated
-
-    except Exception as exc:
-        logger.warning("Translation failed: %s", exc)
-        return jp_title
+        t = _get_translator(source, target)
+        result = t.translate(text[:5000])
+        return result.strip() if result else text
+    except Exception as e:
+        logger.warning(f"Translation failed: {e}")
+        return text
 
 
-def translate_plot(
-    jp_plot: str, target_lang: str = "chinese"
-) -> str:
-    """Translate a Japanese description/plot to target language."""
-    if not jp_plot or not jp_plot.strip():
-        return ""
-
-    client = _get_client()
-    if not client:
-        return jp_plot
-
-    lang_names = {
-        "chinese": "Chinese",
-        "english": "English",
-        "cn": "Chinese",
-        "en": "English",
-    }
-    lang = lang_names.get(target_lang.lower(), target_lang.capitalize())
-
-    try:
-        model = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
-
-        prompt = (
-            f"Translate the following Japanese adult video description to "
-            f"{lang}. Keep the original tone. Only return the translated "
-            f"text, nothing else.\n\nDescription: {jp_plot}"
-        )
-
-        resp = client.chat.completions.create(
-            model=model,
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.1,
-            max_tokens=500,
-        )
-
-        translated = resp.choices[0].message.content.strip()
-        return translated
-
-    except Exception as exc:
-        logger.warning("Plot translation failed: %s", exc)
-        return jp_plot
+def has_japanese(text: str) -> bool:
+    """Check if text contains Japanese characters (kana)."""
+    return bool(re.search(r'[\u3040-\u309f\u30a0-\u30ff]', text))
 
 
-def translate_metadata(
-    meta: "JavMetadata",  # noqa: F821
-    target_lang: str = "chinese",
-) -> "JavMetadata":  # noqa: F821
-    """Translate title and plot in a JavMetadata object in-place."""
+def translate_title(title: str) -> str:
+    """Translate Japanese title to Chinese."""
+    return translate(title, "ja", "zh-CN")
+
+
+def translate_plot(plot: str) -> str:
+    """Translate Japanese plot/description to Chinese."""
+    return translate(plot, "ja", "zh-CN")
+
+
+def translate_tags(tags: list[str]) -> list[str]:
+    """Translate a list of Japanese tags to Chinese."""
+    result = []
+    for tag in tags:
+        if has_japanese(tag):
+            translated = translate(tag, "ja", "zh-CN")
+            result.append(translated)
+        else:
+            result.append(tag)
+    return result
+
+
+def translate_metadata(meta) -> object:
+    """Translate all text fields in JavMetadata to Chinese, in-place."""
     from jav_scraper.metadata import JavMetadata
 
     if not isinstance(meta, JavMetadata):
         return meta
 
-    if meta.title_jp and not meta.title_cn:
-        meta.title_cn = translate_title(meta.title_jp, target_lang)
+    # Translate title
+    if meta.title_jp and not meta.title_cn and has_japanese(meta.title_jp):
+        meta.title_cn = translate_title(meta.title_jp)
 
-    if meta.plot and target_lang.lower() in ("chinese", "cn"):
-        # Only translate to CN if there's a Japanese plot
-        import re
+    # Translate plot
+    if meta.plot and has_japanese(meta.plot):
+        meta.plot = translate_plot(meta.plot)
 
-        has_japanese = bool(
-            re.search(r'[\u3040-\u309f\u30a0-\u30ff\u4e00-\u9fff]', meta.plot)
-        )
-        if has_japanese:
-            translated = translate_plot(meta.plot, target_lang)
-            if translated and translated != meta.plot:
-                meta.plot = translated
+    # Translate tags
+    if meta.tags:
+        meta.tags = translate_tags(meta.tags)
 
     return meta
