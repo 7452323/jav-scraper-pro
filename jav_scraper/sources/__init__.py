@@ -37,6 +37,9 @@ _register("faleno", 7)
 # --- DMM/FANZA ---
 _register("dmm", 7)
 
+# --- 7mmtv.sx (globally accessible) ---
+_register("seven_mmtv", 33)
+
 # --- New sources (priority 8-33) ---
 _register("jav321", 8)
 _register("mgstage", 9)
