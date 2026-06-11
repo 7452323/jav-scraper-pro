@@ -31,11 +31,11 @@ def scrape(number: str) -> JavMetadata | None:
     num = number.upper().strip()
     num_lower = number.lower()
 
-    # Try direct torrent page first
-    html = fetch_text(f"{BASE_URL}/torrent/{num_lower}")
+    # Try direct torrent page first (onejav URLs use no hyphen, e.g. snos141)
+    html = fetch_text(f"{BASE_URL}/torrent/{num_lower.replace('-', '')}")
     if not html or "torrent" not in html.lower():
         # Fallback: search
-        html = fetch_text(f"{BASE_URL}/search/{num_lower}/")
+        html = fetch_text(f"{BASE_URL}/search/{num_lower.replace('-', '')}/")
         if not html:
             return None
         link = _find_torrent_page(num, html)
