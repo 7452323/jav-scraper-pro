@@ -9,7 +9,7 @@
 
 ---
 
-# English Documentation
+## English Documentation
 
 ## Overview
 
@@ -346,7 +346,7 @@ MIT
 
 ---
 
-# 中文文档
+## 中文文档
 
 ## 概述
 
