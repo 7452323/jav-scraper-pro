@@ -73,6 +73,7 @@ def translate(
     source: str = "ja",
     target: str = "zh-CN",
     services: list[str] | None = None,
+    force: bool = False,
 ) -> str:
     """Translate text using free services with automatic fallback.
 
@@ -82,6 +83,7 @@ def translate(
         target: Target language code (default: zh-CN).
         services: Ordered list of service names to try.
                   Default: all available free services.
+        force: If True, skip language detection and always attempt translation.
 
     Returns:
         Translated text, or original text if all translations fail.
@@ -89,16 +91,17 @@ def translate(
     if not text or not text.strip():
         return ""
 
-    # Skip if text doesn't look like it needs translation
+    # Skip language detection for ASCII-only text unless forced
     cn_chars = sum(1 for c in text if '\u4e00' <= c <= '\u9fff')
     has_jp = _has_japanese(text)
 
-    if not has_jp and cn_chars == 0:
-        # Pure ASCII - skip
-        return text
-    if not has_jp and cn_chars > len(text) * 0.4:
-        # Looks like Chinese already (no kana detected)
-        return text
+    if not force:
+        if not has_jp and cn_chars == 0:
+            # Pure ASCII - skip
+            return text
+        if not has_jp and cn_chars > len(text) * 0.4:
+            # Looks like Chinese already (no kana detected)
+            return text
 
     if services is None:
         services = [s for s, _ in _TRANSLATOR_FACTORIES]
@@ -143,14 +146,18 @@ def translate_title(title: str) -> str:
 
 
 def translate_tags(tags: list[str]) -> list[str]:
-    """Translate a list of Japanese tags to Chinese."""
+    """Translate tags to Chinese. Handles both Japanese and English tags."""
     result = []
     for tag in tags:
+        if not tag:
+            continue
         if _has_japanese(tag):
-            translated = translate(tag, "ja", "zh-CN")
-            result.append(translated)
+            translated = translate(tag, "ja", "zh-CN", force=True)
+            result.append(translated if translated and translated != tag else tag)
         else:
-            result.append(tag)
+            # English tag → translate to Chinese
+            translated = translate(tag, "en", "zh-CN", force=True)
+            result.append(translated if translated and translated != tag else tag)
     return result
 
 
